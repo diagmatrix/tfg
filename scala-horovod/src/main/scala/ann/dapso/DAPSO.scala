@@ -1,52 +1,63 @@
 package ann.dapso
 
-import ann.utils.{MSEClass, uniform}
-
-import scala.util.Random
+import ann.utils.{ForwardProp, MSE, MSEClass, uniform}
+import akka.actor.typed.ActorSystem
 import org.apache.spark.{SparkConf, SparkContext}
 
-val W = 0.721  // 1 / (2 * ln(2))
-val C = 1.193  //  1/2 + ln(2)
+import scala.collection.mutable.ListBuffer
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Channel}
+import scala.util.Random
 
 /**
  * Asynchronous distributed particle swarm optimization
  *
- * @param nInputs Dimension of the input values
+ * @param nInputs Number of input values
  * @param nHidden Number of hidden neurons
  * @param nParticles Number of particles for the swarm optimization
  * @param maxPos Maximum value for the position of a particle when initialized
- * @param batchSize Size for the batches
- * @param w Parameter for velocity calculation
- * @param c1 Parameter for velocity calculation
- * @param c2 Parameter for velocity calculation
+ * @param MSEFunction Function for MSE calculation
+ * @param forwardPropFunction Function for forward propagation
+ * @param batchSize Size for the batches (5 default)
+ * @param w Parameter for velocity calculation (1 default)
+ * @param c1 Parameter for velocity calculation (0.8 default)
+ * @param c2 Parameter for velocity calculation (0.2 default)
  */
 class DAPSO(
- val nInputs: Int,
- val nHidden: Int,
- val nParticles: Int,
- val maxPos: Double,
- val batchSize: Int,
- val w: Double = W,
- val c1: Double = C,
- val c2: Double = C,
-) {
-  // Spark config
-  val conf: SparkConf = new SparkConf()
+  val nInputs: Int,
+  val nHidden: Int,
+  val nParticles: Int,
+  val maxPos: Double,
+  val MSEFunction: MSE,
+  val forwardPropFunction: ForwardProp,
+  val batchSize: Int = 5,
+  val w: Double = 1,
+  val c1: Double = 0.8,
+  val c2: Double = 0.2
+ ) {
+  // Spark configuration
+  val sConf: SparkConf = new SparkConf()
     .setAppName("DAPSO")
     .setMaster("local[*]")
-  val spContext: SparkContext = SparkContext.getOrCreate(conf)
+  val sContext: SparkContext = SparkContext.getOrCreate(sConf)
+
+  // Channel definitions
+  val srch = new Channel[BatchPSO]()
+  val fuch = new Channel[ListBuffer[Array[Double]]]()
+
   // Weight array size
   val nWeights: Int = (nInputs + 1) * nHidden
+  //Random object
+  val rand = new Random
+  // Maximum velocity
+  val vMax: Double = 0.6 * maxPos
   // Particles' positions
-  var particlesPos: Array[Array[Double]] = Array.ofDim[Array[Double]](nParticles)
+  var particlesPos = Array.empty[Array[Double]]
   // Swarm's best position
   var bestPos = Array.empty[Double]
   // Swarm's best fitness
   var bestFitness: Double = Double.MaxValue
-  // Random object
-  val rand = new Random
-  // Maximum velocity
-  val maxV: Double = 0.6 * maxPos
+
   // Data to use for the algorithm
   var x: Array[Array[Double]] = _
   var y: Array[Double] = _
@@ -60,28 +71,54 @@ class DAPSO(
     // Set data
     this.x = x.map(v => v.toArray).toArray
     this.y = y.toArray
-
-    // Init weights
+    // Initialize weights
     for(i<-0 until nParticles){
-      val position = Array.fill(nWeights)(uniform(maxPos, rand))
-      val velocity = Array.fill(nWeights)(uniform(maxPos, rand))
-      val fit = MSEClass(this.x, this.y, position, nInputs, nHidden)  // TODO: Change depending on net type
-      val particle = position ++ velocity ++ position ++ Array(fit)
+      val position = Array.fill(nWeights)(uniform(-maxPos, maxPos, rand))
+      val velocity = Array.fill(nWeights)(uniform(-maxPos, maxPos, rand))
+      val fit = MSEFunction.compute(this.x, this.y, position, nInputs, nHidden)
+      val part_ = position ++ velocity ++ position ++ Array(fit)
       if (fit < bestFitness) {
         bestFitness = fit
         bestPos = position
       }
-      particlesPos = particlesPos :+ particle
+      particlesPos = particlesPos :+ part_
     }
   }
 
-  def fit(): Unit = {
+  /**
+   * Fit the data
+   */
+  def fit(nIters: Int):Unit ={
+    import ann.dapso.GlobalActor.{StartSendingMessages, StopSendingMessages}
+
+    // Check if the net is a classifier
+    val isClas = if (MSEFunction == MSEClass) true else false
+
+    FitnessActor.initialize(srch,fuch,x,y,nInputs,nHidden,sContext, isClas)
+    GlobalActor.initialize(srch,fuch,nWeights,batchSize,nIters,nParticles,rand,w,c1,c2,vMax, particlesPos)
+    val dapsoController = new DAPSOController(this)
+    val globalEvalActor = ActorSystem(GlobalActor(dapsoController),"GlobalEvalActor")
+
+    globalEvalActor ! StartSendingMessages
+    globalEvalActor ! StopSendingMessages
+    Await.result(globalEvalActor.whenTerminated, Duration.Inf )
 
   }
 
-  def get_weights(): List[Double] = {
-   return List(1.1)
+  /**
+   * @return The weights (swarm's best position)
+   */
+  def getWeights: Array[Double] = {
+    bestPos
   }
 
-  def updateResult(res: Array[Double], fitness: Double): Unit = ???
+  /**
+   * Updates the swarm's best position and fitness
+   * @param pos Swarm position
+   * @param fitness Swarm fitness
+   */
+  def updateResult(pos: Array[Double], fitness: Double): Unit = {
+    bestPos = pos
+    bestFitness = fitness
+  }
 }

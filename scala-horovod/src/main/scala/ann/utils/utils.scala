@@ -56,72 +56,19 @@ package object utils {
   }
 
   /**
-   * Generates a number in the interval (-x,x)
+   * Generates a number in the interval (a,b)
    *
-   * @param x    The frontier value of the interval
+   * @param a The minimum value of the interval
+   * @param b The maximum value of the interval
    * @param rand Random object
-   * @return A number between -x and x
+   * @return A number between a and b
    */
-  def uniform(x: Double, rand: Random): Double = (rand.nextDouble() * 2 * x) - x
-
-  /**
-   * Calculates the mean square error of an ANN
-   *
-   * @param x          Characteristics data
-   * @param y          Output data
-   * @param weights    Net weights
-   * @param nInput     Number of input neurons
-   * @param nHidden    Number of hidden neurons
-   * @param clas       Whether the net is a classifier
-   * @return The MSE of the net
-   */
-  private def MSE(x: Array[Array[Double]], y: Array[Double], weights: Array[Double], nInput: Int, nHidden: Int, clas: Boolean): Double = {
-    val yPredictor = fowardProp(_, _, _, _, clas)
-    val predictions = x.map(xi => yPredictor(xi, weights, nInput, nHidden))
-    val errors = (predictions zip y).map(v => math.pow(v._2 - v._1, 2))
-
-    errors.sum / x.length
-  }
-
-  /**
-   * Foward propagation prediction of output
-   * @param xi Input data for prediction
-   * @param weights Net weights
-   * @param nInput Number of input neurons
-   * @param nHidden Number of hidden neurons
-   * @param clas Whether the net is for prediction or classification
-   * @return The predicted output
-   */
-  private def fowardProp(xi: Array[Double], weights: Array[Double], nInput: Int, nHidden: Int, clas: Boolean): Double = {
-    // Input to hidden
-    val z2 = Array.fill(nHidden)(0.0)
-    for (j <- 0 until nHidden) {
-      val weightsSlice = weights.slice(nInput * j, nInput * (j + 1))
-      val result = (xi zip weightsSlice).map(v => v._1 * v._2).sum
-      z2(j) = tanh(result)
-    }
-
-    // Hidden to output
-    val weightsSlice = weights.slice(nInput * nHidden, weights.length)
-    val z3 = (z2 zip weightsSlice).map(v => v._1 * v._2).sum
-
-    if (clas) {
-      tanh(z3)
-    } else {
-      z3
-    }
-  }
-
-  /**
-   * MSE functions for classification and regression
-   */
-  val MSEClass: (Array[Array[Double]], Array[Double], Array[Double], Int, Int) => Double = MSE(_, _, _, _, _, clas = true)
-  val MSEReg: (Array[Array[Double]], Array[Double], Array[Double], Int, Int) => Double = MSE(_, _, _, _, _, clas = false)
+  def uniform(a: Double, b: Double, rand: Random): Double = a + (b - a) * rand.nextDouble()
 
   /**
    * Calculates the fitness of the Net
    */
-  def calculateFitness(x: Array[Array[Double]], y: Array[Double], weights: Array[Double], nInput: Int, nHidden: Int): Array[Double] = {
+  def calculateFitness(x: Array[Array[Double]], y: Array[Double], weights: Array[Double], nInput: Int, nHidden: Int, isClas: Boolean): Array[Double] = {
     val nWeights: Int = nHidden * (nInput + 1)
 
     // Return if there are no weights
@@ -132,7 +79,12 @@ package object utils {
     // Calculate fitness
     val bestLocalFit = weights(3 * nWeights)
     val weightSlice = weights.slice(0, nWeights)
-    val fit = calculateAccuracy(x, y, weightSlice, nInput, nHidden)  // TODO: Maybe change for not classification
+    var fit: Double = 0
+    if (isClas) {
+      fit = calculateAccuracy(x, y, weightSlice, nInput, nHidden)
+    } else {
+      fit = MSEReg.compute(x, y, weightSlice, nInput, nHidden)
+    }
 
     if (fit < bestLocalFit) {
       weights(3 * nWeights) = fit
@@ -158,10 +110,38 @@ package object utils {
   def calculateAccuracy(x: Array[Array[Double]], y: Array[Double], weights: Array[Double], nInput: Int, nHidden: Int): Double = {
     var yPred: Array[Double] = Array.emptyDoubleArray
     for (i <- x.indices) {
-      val pr = signum(fowardProp(x(i), weights, nInput, nHidden, clas = true))
+      val pr = signum(ForwardPropClass.compute(x(i), weights, nInput, nHidden))
       yPred = yPred :+ pr
     }
     1.0 - accuracy(y, yPred)
+  }
+
+  /**
+   * Calculates the position of a particle in PSO
+   */
+  def calculatePosition(particle: Array[Double], mpg: Array[Double], N: Int, rand: Random, W: Double, c1: Double, c2: Double, maxV: Double, maxPos: Double): Array[Double] = {
+    val velocities = particle.slice(N, 2 * N)
+    val mpl = particle.slice(2 * N, 3 * N)
+
+    for (k <- 0 until N) {
+      // Calculate velocity
+      velocities(k) = W * velocities(k) + uniform(0, c1, rand) * (mpl(k) - particle(k)) + uniform(0, c2, rand) * (mpg(k) - particle(k))
+      if (velocities(k) > maxV) {
+        velocities(k) = maxV
+      } else if (velocities(k) < -maxV) {
+        velocities(k) = -maxV
+      }
+      // Calculate position
+      particle(k) = particle(k) + velocities(k)
+      if (particle(k) > maxPos){
+        particle(k) = maxPos
+      } else if (particle(k) < -maxPos){
+        particle(k) = -maxPos
+      }
+      // Update velocity values
+      particle(N + k) = velocities(k)
+    }
+    particle
   }
 
   /**

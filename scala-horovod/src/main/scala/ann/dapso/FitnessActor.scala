@@ -2,7 +2,7 @@ package ann.dapso
 
 import akka.actor.typed.Behavior
 import akka.actor.typed.javadsl.{ActorContext, Behaviors}
-import ann.utils.{calculateFitness, toListBuffer}
+import ann.utils.{ForwardProp, calculateFitness, toListBuffer}
 import org.apache.spark.SparkContext
 
 import scala.collection.mutable.ListBuffer
@@ -13,7 +13,7 @@ object FitnessActor {
   sealed trait MessageToFitnessActor
   final case class ContinueReceivingMessage() extends MessageToFitnessActor
   // Reading channel
-  private var srch: Channel[Batch] = _
+  private var srch: Channel[BatchPSO] = _
   // Writing channel
   private var fuch: Channel[ListBuffer[Array[Double]]] = _
   // Net data
@@ -23,13 +23,15 @@ object FitnessActor {
   private var nHidden: Int = _
   // Spark context
   private var spContext: SparkContext = _
+  // Wether the net is a classifier
+  private var isClas: Boolean = _
 
   /**
    * Initializes object variables
    */
-  def init(
-    srch: Channel[Batch], fuch: Channel[ListBuffer[Array[Double]]], data: Array[Array[Double]],
-    y: Array[Double], nInputs: Int, nHidden: Int, sc: SparkContext
+  def initialize(
+    srch: Channel[BatchPSO], fuch: Channel[ListBuffer[Array[Double]]], data: Array[Array[Double]],
+    y: Array[Double], nInputs: Int, nHidden: Int, sc: SparkContext, isClas: Boolean
   ): Unit = {
     FitnessActor.srch = srch
     FitnessActor.fuch = fuch
@@ -38,6 +40,7 @@ object FitnessActor {
     FitnessActor.nInput = nInputs
     FitnessActor.nHidden = nHidden
     FitnessActor.spContext = sc
+    FitnessActor.isClas = isClas
   }
 
   /**
@@ -48,8 +51,8 @@ object FitnessActor {
     val batch = srch.read
     val batchData = batch.getBatch.toArray
     // Set parallelization
-    val RDD = spContext.parallelize(batchData, 4)
-    val psfu_array = RDD.map(part => calculateFitness(x, y, part, nInput, nHidden)).collect()
+    val RDD = spContext.parallelize(batchData, 4) // TODO: 4?
+    val psfu_array = RDD.map(part => calculateFitness(x, y, part, nInput, nHidden, isClas)).collect()
     // Write result
     val psfu = toListBuffer(psfu_array)
     fuch.write(psfu)

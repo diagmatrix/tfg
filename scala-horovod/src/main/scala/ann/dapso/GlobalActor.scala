@@ -3,6 +3,7 @@ package ann.dapso
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.Behaviors
 import ann.dapso.FitnessActor.ContinueReceivingMessage
+import ann.utils.calculatePosition
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Channel
@@ -15,7 +16,7 @@ object GlobalActor {
   case object ContinueSendingMessages extends SystemMessage
   case object StopSendingMessages extends SystemMessage
   // Channels
-  private var srch: Channel[Batch] = _
+  private var srch: Channel[BatchPSO] = _
   private var fuch: Channel[ListBuffer[Array[Double]]] = _
   // DAPSO variables
   var bestFitness: Double = Double.MaxValue
@@ -35,7 +36,7 @@ object GlobalActor {
   /**
    * Initializes object
    */
-  def initialize(srch: Channel[Batch], fuch: Channel[ListBuffer[Array[Double]]], N: Int, S: Int, I: Int, m: Int,
+  def initialize(srch: Channel[BatchPSO], fuch: Channel[ListBuffer[Array[Double]]], N: Int, S: Int, I: Int, m: Int,
                  rand: Random, W: Double, c1: Double, c2: Double, maxPos: Double, particlesPos: Array[Array[Double]]): Unit = {
     GlobalActor.fuch = fuch
     GlobalActor.srch = srch
@@ -55,7 +56,7 @@ object GlobalActor {
   def apply(dapsoController: DAPSOController): Behavior[SystemMessage] = Behaviors.setup[SystemMessage] {
     actorContext =>
       val fitnessEvalActor = actorContext.spawn(FitnessActor(), "FitnessActor")
-      val batch = new Batch(batchSize)
+      val batch = new BatchPSO(batchSize)
 
       // Add particles to the queue
       for (i <- 0 until nParticles) {
@@ -74,24 +75,27 @@ object GlobalActor {
           val iters = nIters * nParticles / batchSize
           for (i <- 0 until iters) {
             // Read from the Fitness writing channel
-            var sr = fuch.read
+            var data = fuch.read
 
             var pos: Array[Double] = new Array[Double](0)
             var velocity: Array[Double] = new Array[Double](0)
             var bestGlobalPos: Array[Double] = new Array[Double](0)
             var fit: Double = 0
 
-            for (par <- sr) {
-              pos = par.slice(0, nWeights)
-              velocity = par.slice(nWeights, 2 * nWeights)
-              bestGlobalPos = par.slice(2 * nWeights, 3 * nWeights)
-              fit = par(3 * nWeights)
+            // PSO
+            for (posVel <- data) {
+              pos = posVel.slice(0, nWeights)
+              velocity = posVel.slice(nWeights, 2 * nWeights)
+              bestGlobalPos = posVel.slice(2 * nWeights, 3 * nWeights)
+              fit = posVel(3 * nWeights)
 
               if (fit < bestFitness) {
                 bestFitness = fit
                 bestPos = bestGlobalPos
               }
-              val newPar = FA.posEval(par, mejor_pos_global, N, rand, W, c_1, c_2, V_max, pos_max)
+
+              // Write the new position to the channel
+              val newPar = calculatePosition(posVel, bestGlobalPos, nWeights, rand, W, c1, c2, maxV, maxPos)
               if (batch.isFull) {
                 srch.write(batch.copy())
                 fitnessEvalActor ! ContinueReceivingMessage()
@@ -99,20 +103,19 @@ object GlobalActor {
               }
               batch.add(newPar)
             }
+
             // Clean the vars
-            sr = null
+            data = null
             pos = null
             velocity = null
             bestGlobalPos = null
           }
 
-
-
           actorContext.self ! StopSendingMessages
 
           Behaviors.same
         case StopSendingMessages =>
-          dapsoController.recieveResult(bestPos, bestFitness)
+          dapsoController.receiveResult(bestPos, bestFitness)
           Behaviors.stopped
       }
   }

@@ -2,7 +2,7 @@ package ann.dapso
 
 import scala.collection.mutable.ListBuffer
 
-class Batch(private val size: Int) {
+class BatchPSO(private val size: Int) {
   private val batches: ListBuffer[Array[Double]] = ListBuffer.empty[Array[Double]]
   private var index: Int = 0
 
@@ -21,8 +21,8 @@ class Batch(private val size: Int) {
 
   def getIndex: Int = index
 
-  def copy(): Batch = {
-    val copiedBatch = new Batch(size)
+  def copy(): BatchPSO = {
+    val copiedBatch = new BatchPSO(size)
     copiedBatch.index = index
     for (i <- 0 until index) {
       copiedBatch.batches += batches(i).clone()
