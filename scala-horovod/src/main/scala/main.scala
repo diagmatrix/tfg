@@ -27,7 +27,7 @@ object main {
     val net2 = new Regressor(rI, rH)
     net2.setTrainingData("abalone_train.csv", nRows)
     net2.setTestData("abalone_test.csv", nRows)
-    val dapso2 = new DAPSO(rI,rH,nParts,MSEReg,ForwardPropReg,maxPos,c1 = c1, c2=c2, batchSize = 5, rddNum = 8)
+    val dapso2 = new DAPSO(nParts,maxPos,c1 = c1, c2=c2, batchSize = 5, rddNum = 8)
     net2.setTrainer(dapso2)
 
     val validationFile = new FileWriter(s"resultados.txt", true)

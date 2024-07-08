@@ -14,11 +14,7 @@ import scala.util.Random
 /**
  * Asynchronous distributed particle swarm optimization
  *
- * @param nInputs Number of input values
- * @param nHidden Number of hidden neurons
  * @param nParticles Number of particles for the swarm optimization
- * @param MSEFunction Function for MSE calculation
- * @param forwardPropFunction Function for forward propagation
  * @param maxPos Maximum value for the position of a particle
  * @param maxV Maximum value for the velocity of a particle (0.6 maxPos default)
  * @param w Parameter for velocity calculation (1/(2ln(2)) default)
@@ -28,11 +24,7 @@ import scala.util.Random
  * @param batchSize Size for the batches (5 default)
  */
 class DAPSO(
-  val nInputs: Int,
-  val nHidden: Int,
   val nParticles: Int,
-  val MSEFunction: MSE,
-  val forwardPropFunction: ForwardProp,
   val maxPos: Double,
   val maxV: Double = 0,
   val w: Double = 0.721,
@@ -51,8 +43,6 @@ class DAPSO(
   val srch = new Channel[BatchPSO]()
   val fuch = new Channel[ListBuffer[Array[Double]]]()
 
-  // Weight array size
-  val nWeights: Int = (nInputs + 1) * nHidden
   //Random object
   val rand = new Random
   // Maximum velocity

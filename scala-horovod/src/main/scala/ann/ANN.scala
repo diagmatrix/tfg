@@ -47,6 +47,7 @@ trait ANN {
    */
   def setTrainer(alg: Trainer): Unit = {
     trainer = alg
+    trainer.setStructure(nInputNeurons,nHiddenNeurons,netMSE,forwardProp)
   }
 
   /**
