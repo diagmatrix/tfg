@@ -1,0 +1,3 @@
+# Exclude java files (because they are 'kind of' dependencies, not actual code)
+*.java linguist-vendored
+
