@@ -1,4 +1,5 @@
 // Generated from ssdl.g4 by ANTLR 4.13.1
+package grammar;
 import org.antlr.v4.runtime.atn.*;
 import org.antlr.v4.runtime.dfa.DFA;
 import org.antlr.v4.runtime.*;
@@ -121,6 +122,11 @@ public class ssdlParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ssdlListener ) ((ssdlListener)listener).exitProgram(this);
 		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ssdlVisitor ) return ((ssdlVisitor<? extends T>)visitor).visitProgram(this);
+			else return visitor.visitChildren(this);
+		}
 	}
 
 	public final ProgramContext program() throws RecognitionException {
@@ -192,6 +198,11 @@ public class ssdlParser extends Parser {
 		@Override
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ssdlListener ) ((ssdlListener)listener).exitStmt(this);
+		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ssdlVisitor ) return ((ssdlVisitor<? extends T>)visitor).visitStmt(this);
+			else return visitor.visitChildren(this);
 		}
 	}
 
@@ -281,6 +292,11 @@ public class ssdlParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ssdlListener ) ((ssdlListener)listener).exitAction(this);
 		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ssdlVisitor ) return ((ssdlVisitor<? extends T>)visitor).visitAction(this);
+			else return visitor.visitChildren(this);
+		}
 	}
 
 	public final ActionContext action() throws RecognitionException {
@@ -342,6 +358,11 @@ public class ssdlParser extends Parser {
 		@Override
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ssdlListener ) ((ssdlListener)listener).exitParameter(this);
+		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ssdlVisitor ) return ((ssdlVisitor<? extends T>)visitor).visitParameter(this);
+			else return visitor.visitChildren(this);
 		}
 	}
 
@@ -417,6 +438,11 @@ public class ssdlParser extends Parser {
 		@Override
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ssdlListener ) ((ssdlListener)listener).exitAnn_argument(this);
+		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ssdlVisitor ) return ((ssdlVisitor<? extends T>)visitor).visitAnn_argument(this);
+			else return visitor.visitChildren(this);
 		}
 	}
 
@@ -509,6 +535,11 @@ public class ssdlParser extends Parser {
 		@Override
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ssdlListener ) ((ssdlListener)listener).exitDapso_argument(this);
+		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ssdlVisitor ) return ((ssdlVisitor<? extends T>)visitor).visitDapso_argument(this);
+			else return visitor.visitChildren(this);
 		}
 	}
 

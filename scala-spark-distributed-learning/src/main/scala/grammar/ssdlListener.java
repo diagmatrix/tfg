@@ -1,4 +1,5 @@
 // Generated from ssdl.g4 by ANTLR 4.13.1
+package grammar;
 import org.antlr.v4.runtime.tree.ParseTreeListener;
 
 /**
