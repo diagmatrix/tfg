@@ -1,7 +1,9 @@
 package ann
 
-import ann.dapso.DAPSO
-import ann.utils.{ForwardProp, ForwardPropClass, ForwardPropReg, MSE, MSEClass, MSEReg}
+import ann.trainer.Trainer
+import ann.utils.{ForwardProp, ForwardPropClass, ForwardPropReg, MSE, MSEClass, MSEReg, writeCSV}
+
+import java.time.LocalDateTime
 
 /**
  * Artificial neural network trait
@@ -23,7 +25,7 @@ trait ANN {
   // Forward propagation method
   var forwardProp: ForwardProp = _
   // Training mechanism
-  var trainer: DAPSO = _
+  var trainer: Trainer = _
 
   /**
    * Sets the training data for the net
@@ -40,16 +42,11 @@ trait ANN {
   def setTestData(filename: String, maxRows: Int): Unit
 
   /**
-   * Sets the parameters for the DAPSO
-   * @param nParticles Number of particles
-   * @param maxPos Maximum position of a particle
-   * @param batchSize Batch size for parallel tasks
-   * @param w Parameter for velocity calculation
-   * @param c1 Parameter for velocity calculation
-   * @param c2 Parameter for velocity calculation
+   * Sets the training algorithm for the neural net
+   * @param alg Training algorithm
    */
-  def setParams(nParticles: Int, maxPos: Double, batchSize: Int, w: Double, c1: Double, c2: Double): Unit = {
-    trainer = new DAPSO(nInputNeurons, nHiddenNeurons, nParticles, maxPos, netMSE, forwardProp, batchSize, w, c1, c2)
+  def setTrainer(alg: Trainer): Unit = {
+    trainer = alg
   }
 
   /**
@@ -58,7 +55,7 @@ trait ANN {
    * @return Total number of seconds needed during training
    */
   def fit(nIters: Int): Double = {
-    trainer.init_weights(xTrain, yTrain)
+    trainer.initWeights(xTrain, yTrain)
 
     val start = System.nanoTime()
     trainer.fit(nIters)
@@ -73,11 +70,13 @@ trait ANN {
    * @param xi Value to predict output
    * @return Predicted output
    */
-  def predict(xi: List[Double]): Double = {
-    val Xi = xi.toArray
-    val pr = forwardProp.compute(Xi, weights, nInputNeurons, nHiddenNeurons)
-    math.signum(pr)
-  }
+  def predict(xi: List[Double]): Double = forwardProp.compute(xi.toArray, weights, nInputNeurons, nHiddenNeurons)
+
+  /**
+   * Predicts the full test dataset
+   * @return The list of predicted outcomes
+   */
+  def predictTest(): List[Double] = xTest.map(xi => forwardProp.compute(xi.toArray, weights, nInputNeurons, nHiddenNeurons))
 
   /**
    * @return The MSE of the fitted net
@@ -86,6 +85,15 @@ trait ANN {
     val xTestArr = xTest.map(xi => xi.toArray).toArray
     val yTestArr = yTest.toArray
     netMSE.compute(xTestArr, yTestArr, weights, nInputNeurons, nHiddenNeurons)
+  }
+
+  /**
+   * Writes the weights into a file
+   * @param filename Name of the file
+   */
+  def writeWeights(filename: String = "no_file"): Unit = {
+    val file= if (filename=="no_file") "net_"+LocalDateTime.now().toString else filename
+    writeCSV(file, weights)
   }
 }
 
@@ -126,7 +134,7 @@ class Classifier(val nInputs: Int, val nHidden: Int) extends ANN {
       throw new IllegalStateException("Fit the data first")
     }
 
-    val predictions = xTest.map(xi => predict(xi))
+    val predictions = this.predictTest()
     val successes = (predictions zip yTest).map(yPairs => if (yPairs._1 == yPairs._2) 1 else 0).sum.toDouble
 
     successes / yTest.length

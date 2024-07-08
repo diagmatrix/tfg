@@ -1,7 +1,8 @@
 package ann
 
+import java.io.{FileWriter, PrintWriter}
 import scala.collection.mutable.ListBuffer
-import scala.math.{signum, tanh}
+import scala.math.signum
 import scala.util.Random
 
 package object utils {
@@ -29,6 +30,20 @@ package object utils {
 
     data.close()
     rows
+  }
+
+  /**
+   * Write the weights into a CSV file
+   * @param filename Name for the CSV file
+   * @param weights Array of net weights
+   */
+  def writeCSV(filename: String, weights: Array[Double]): Unit = {
+    val file = new FileWriter(filename+".csv", true)
+    val writer = new PrintWriter(file)
+    val wString = weights.mkString(";")
+    writer.println(wString)
+    writer.close()
+    file.close()
   }
 
   /**

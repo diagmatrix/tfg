@@ -1,8 +1,8 @@
-package ann.dapso
+package ann.trainer.dapso
 
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.Behaviors
-import ann.dapso.FitnessActor.ContinueReceivingMessage
+import FitnessActor.ContinueReceivingMessage
 import ann.utils.calculatePosition
 
 import scala.collection.mutable.ListBuffer

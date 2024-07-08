@@ -1,6 +1,6 @@
 package ann.utils
 
-import scala.math.{tan, tanh}
+import scala.math.{signum, tan, tanh}
 
 /**
  * Foward propagation trait
@@ -35,7 +35,7 @@ trait ForwardProp {
 object ForwardPropClass extends ForwardProp {
   override def compute(xi: Array[Double], weights: Array[Double], nInput: Int, nHidden: Int): Double = {
     val z3 = super.compute(xi, weights, nInput, nHidden)
-    tanh(z3)
+    signum(tanh(z3))
   }
 }
 

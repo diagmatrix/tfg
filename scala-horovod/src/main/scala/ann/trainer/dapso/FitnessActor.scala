@@ -1,4 +1,4 @@
-package ann.dapso
+package ann.trainer.dapso
 
 import akka.actor.typed.Behavior
 import akka.actor.typed.javadsl.{ActorContext, Behaviors}
@@ -25,13 +25,15 @@ object FitnessActor {
   private var spContext: SparkContext = _
   // Wether the net is a classifier
   private var isClas: Boolean = _
+  // Number of tasks
+  private var nTasks: Int = _
 
   /**
    * Initializes object variables
    */
   def initialize(
     srch: Channel[BatchPSO], fuch: Channel[ListBuffer[Array[Double]]], data: Array[Array[Double]],
-    y: Array[Double], nInputs: Int, nHidden: Int, sc: SparkContext, isClas: Boolean
+    y: Array[Double], nInputs: Int, nHidden: Int, sc: SparkContext, isClas: Boolean, nTasks: Int
   ): Unit = {
     FitnessActor.srch = srch
     FitnessActor.fuch = fuch
@@ -41,6 +43,7 @@ object FitnessActor {
     FitnessActor.nHidden = nHidden
     FitnessActor.spContext = sc
     FitnessActor.isClas = isClas
+    FitnessActor.nTasks = nTasks
   }
 
   /**
@@ -51,7 +54,7 @@ object FitnessActor {
     val batch = srch.read
     val batchData = batch.getBatch.toArray
     // Set parallelization
-    val RDD = spContext.parallelize(batchData, 4) // TODO: 4?
+    val RDD = spContext.parallelize(batchData, nTasks)
     val psfu_array = RDD.map(part => calculateFitness(x, y, part, nInput, nHidden, isClas)).collect()
     // Write result
     val psfu = toListBuffer(psfu_array)

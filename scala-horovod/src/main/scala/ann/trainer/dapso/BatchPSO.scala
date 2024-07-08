@@ -1,4 +1,4 @@
-package ann.dapso
+package ann.trainer.dapso
 
 import scala.collection.mutable.ListBuffer
 
