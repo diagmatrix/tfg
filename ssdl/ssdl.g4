@@ -2,12 +2,12 @@
  * GRAMMAR FOR SCALA-SPARK DISTRIBUTED LEARNING
  */
 grammar ssdl;
-program: (stmt|comment)+;
+program: (stmt|COMMENT)+;
 // Statements
 stmt:
     'begin' action 'end'
     |'fit' ID INT
-    |'out' ID STRING?;
+    |'out' ID FILE?;
 // Actions
 action: OBJECT ':' ID parameter+;
 // Parameters
@@ -26,17 +26,17 @@ dapso_argument:
     |'vel_bound' FLOAT
     |'vel_w' FLOAT
     |'vel_c1' FLOAT
-    |'vel_c2';
-// Comments
-comment: '/*' .*? '*/';
+    |'vel_c2' FLOAT;
 // Special types
 OBJECT: 'ann' | 'dapso';
 NET_TYPE: 'classifier' | 'regressor';
+// Comments
+COMMENT: '/*' .*? '*/' -> skip;
 // Standard types
 INT: [0-9]+;
-FLOAT: INT '.' INT;
+FLOAT: INT '.' INT | INT;
 ID: [a-zA-Z0-9]+;
 STRING: '"'ID'"';
-FILE: '"'ID'.csv"';
+FILE: '"'.+?'.csv"';
 // Whitespaces
 WS: [ \t\r\n]+ -> skip;
