@@ -36,7 +36,6 @@ COMMENT: '/*' .*? '*/' -> skip;
 INT: [0-9]+;
 FLOAT: INT '.' INT | INT;
 ID: [a-zA-Z0-9]+;
-STRING: '"'ID'"';
 FILE: '"'.+?'.csv"';
 // Whitespaces
 WS: [ \t\r\n]+ -> skip;
