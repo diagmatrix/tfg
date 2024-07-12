@@ -140,6 +140,26 @@ class Classifier(val nInputs: Int, val nHidden: Int) extends ANN {
 
     successes / yTest.length
   }
+
+  /**
+   * @return The confusion matrix of the net (TP,FN,FP,TN)
+   */
+  def confusionMatrix(): (Int,Int,Int,Int) = {
+    if (xTest.isEmpty || yTest.isEmpty) {
+      throw new IllegalStateException("You need to set the data first")
+    } else if (weights.isEmpty) {
+      throw new IllegalStateException("Fit the data first")
+    }
+    val predictions = this.predictTest()
+
+    // Confusion matrix cells
+    val truePos = (predictions zip yTest).map(yPairs => if (yPairs._1==1.0 && yPairs._2==1.0) 1 else 0).sum
+    val falseNeg = (predictions zip yTest).map(yPairs => if (yPairs._1==(-1.0) && yPairs._2==1.0) 1 else 0).sum
+    val falsePos = (predictions zip yTest).map(yPairs => if (yPairs._1==1.0 && yPairs._2==(-1.0)) 1 else 0).sum
+    val trueNeg = (predictions zip yTest).map(yPairs => if (yPairs._1==(-1.0) && yPairs._2==(-1.0)) 1 else 0).sum
+
+    (truePos,falseNeg,falsePos,trueNeg)
+  }
 }
 
 /**
