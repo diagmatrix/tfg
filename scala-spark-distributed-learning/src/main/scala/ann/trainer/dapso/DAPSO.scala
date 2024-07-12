@@ -36,7 +36,7 @@ class DAPSO(
   // Spark configuration
   val sConf: SparkConf = new SparkConf()
     .setAppName("DAPSO")
-    .setMaster("local[*]")
+    .setMaster("local[*]") // Modify this to set the port of the standalone GPU cluster
   val sContext: SparkContext = SparkContext.getOrCreate(sConf)
 
   // Channel definitions
