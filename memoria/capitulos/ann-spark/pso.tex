@@ -1,0 +1,359 @@
+% !TeX root = ../tfg.tex
+% !TeX encoding = utf8
+
+\chapter{Optimización por enjambre de partículas}\label{chap:pso}
+
+A lo largo de los siglos, la naturaleza ha sido siempre una fuente de inspiración para la humanidad. La inteligencia
+de enjambre, una rama de la inteligencia artificial, intenta emular los comportamientos de inteligencia colectiva de
+enjambres de la naturaleza. Normalmente, un enjambre se define como un gran número de agentes sencillos y homogéneos
+que interactúan localmente con su entorno, así como con sí mismos, con un control descentralizado del que emerge un
+comportamiento global \cite{gad_2022}.
+
+\vspace{10pt}
+El algoritmo de \textbf{\textit{optimización por enjambre de partículas}} o \textbf{\textit{PSO}} 
+(\textit{particle swarm optimization}) es uno de los modelos de inteligencia de enjambre más populares. El PSO es
+un algoritmo estocástico propuesto originalmente en la década de 1990, inspirado por los comportamientos sociales de
+animales como las bandadas de pájaros o los bancos de peces. En este algoritmo, cada solución potencial de un problema
+se representa como una partícula con una cierta velocidad que vuela sobre el espacio de definición del problema, como
+si de un pájaro se tratara. Cada partícula combina después algún aspecto del registro de su mejor ubicación y la actual
+con algunas otras del enjambre para determinar su próximo movimiento. El enjambre en su conjunto, como por ejemplo un
+banco de peces en búsqueda de alimento, se acerca gradualmente al óptimo de la función objetivo \cite{gad_2022}.
+
+\vspace{10pt}
+En este capítulo vamos a estudiar este algoritmo para su uso en redes neuronales prealimentadas de una capa. En primer
+lugar, hablaremos de las características y estructura general del algoritmo, para luego hablar del implementado en la
+herramienta: el \textbf{\textit{algoritmo de optimización por enjambre de partículas asíncrono distribuido}} o 
+\textbf{\textit{DAPSO}} (\textit{distributed asynchronous PSO}).
+
+% -------------------------------------------------------------------------------------------------------------------
+\section{Descripción del algoritmo}
+
+% -------------------------------------------------------------------------------------------------------------------
+\subsection{Definiciones}
+
+Para simplificar las definiciones, vamos a suponer que el problema que estamos intentando resolver es el de búsqueda
+de un mínimo, que se corresponde justamente con el proceso de entrenamiento de una red, en el cual intentamos minimizar
+la función de costo. Dada una función $f$ o función objetivo, denominada \textit{fitness}, definida en un espacio de 
+$D$ dimensiones, al que llamaremos \textit{espacio de búsqueda}, el objetivo del algoritmo es encontrar el punto de ese
+espacio en el cual la función alcanza su mínimo \cite{clerc_12}.
+
+\vspace{10pt}
+Para el caso de uso de la herramienta, tenemos que $f$ será o el error cuadrático medio de la red o la 
+exactitud (\textit{accuracy}) de la red (en cuyo caso utilizamos $1-\text{exactitud}$ para transformar el 
+problema a uno de minimización), y por tanto el valor de la $\textit{fitness}$ dependerá también de los 
+ejemplos utilizados. Definimos ahora el espacio de búsqueda como:
+
+\begin{definicion}[Espacio de búsqueda]Denominamos \textit{espacio de búsqueda} ($E$) al hiperparalelepípedo 
+definido como el producto euclídeo de $D$ intervalos reales
+\begin{equation}
+    E=\bigotimes_{d=1}^D[\min(d),\max(d)]
+\end{equation}
+donde $\min(d)$ (resp. $\max(d)$) es el valor mínimo (resp. máximo) que puede darse en esa componente \cite{clerc_12}.
+\end{definicion}
+
+En el caso de uso de la herramienta, el espacio de búsqueda será el producto euclídeo de los dominios de los pesos de
+la red, siendo $D$ entonces el número total de pesos de la red neuronal.
+
+\vspace{10pt}
+Un \textbf{\textit{enjambre}} será un conjunto ordenado de $S$ partículas, numeradas desde $0$ a $S-1$, donde cada 
+partícula se define como:
+
+\begin{definicion}[Partícula] Una partícula es una tripla de vectores $D$ dimensionales $\big(x(t),v(t),p(t)\big)$, 
+con 
+$x(t),p(t),g(t)\in E$, donde:
+\begin{enumerate}[(a)]
+    \item $x(t)$ es la posición de la partícula en el valor de tiempo $t$.
+    \item $v(t)$ es la velocidad de la partícula en el valor de tiempo $t$.
+    \item $p(t)$ es la mejor posición local de la partícula hasta el momento $t$.
+\end{enumerate}
+\end{definicion}
+
+Se definen $p_i(t)$ para cada partícula del enjambre y $g(t)$, la mejor posición global del enjambre, de la siguiente 
+manera:
+\begin{align}
+    p_i(t)&=\min_{k=1,\dots,t}\Big(f\big(x_i(k)\big)\Big) \\
+    g(t)&=\min_{\substack{j=0,\dots,S-1 \\ k=1,\dots,t}}\Big(f\big(p_j(k)\big)\Big)
+\end{align}
+Donde $f$ es la función \textit{fitness} que queremos minimizar \cite{gad_2022}.
+
+% -------------------------------------------------------------------------------------------------------------------
+\subsection{Inicialización}
+
+El primer paso del algoritmo PSO es la inicialización. Para ello, primero debemos definir el número de partículas para
+el algoritmo. Las primeras definiciones del algoritmo proponían un valor fijo dependiendo de la dimensión del espacio
+de búsqueda, mediante esta fórmula:
+\begin{equation}\label{eq:pso-init}
+    S=10+2\sqrt{D}
+\end{equation}
+Sin embargo, este número suele estar alejado del valor óptimo. El valor inicial sugerido es 40 \cite{clerc_12}. 
+
+\vspace{10pt}
+Una vez elegido el número de partículas, el algoritmo inicializa a valores ``aleatorios'' cada partícula. Denotamos 
+este paso con el momento temporal $0$. Para cada partícula $i$ del enjambre, se inicializan sus valores y la mejor
+posición global del enjambre de la siguiente manera:
+\begin{align}\label{eq:pso-part}
+    &\text{Para cada }j=1,\dots,D\quad x_{ij}(0)=U(m_1,m_2) \\
+    &\text{Para cada }j=1,\dots,D\quad v_{ij}(0)=U(m_1-x_{ij}(0),m_2-x_{ij}(0)) \\
+    &p_i(0)=x_i(0) \\
+    &g(0)=\min_{i=0,\dots,S-1}\Big(f\big(p_j(0)\big)\Big)
+\end{align}
+donde $U$ denota la distribución uniforme y $m_1$, $m_2$ pueden ser o parámetros dados simbolizando los valores límite
+del espacio de búsqueda o $\min(d)$ y $\max(d)$ respectivamente \cite{clerc_12}.
+
+% -------------------------------------------------------------------------------------------------------------------
+\subsection{Iteraciones}
+
+Una vez inicializadas las partículas, se realiza un cierto número de iteraciones, que puede ser un valor prefijado o
+una condición de parada. Usualmente esta condición suele ser un valor umbral para la función \textit{fitness}, o un
+número máximo de iteraciones en la cual no haya una mejora (reducción en nuestro caso) de esa misma función 
+\cite{clerc_12}. En cada una de esas iteraciones, que se corresponden con un valor entero de $t$, se realizan los 
+siguientes pasos:
+\begin{enumerate}
+    \item Se calcula, para cada partícula, una nueva velocidad, utilizando la siguiente fórmula:
+    \begin{equation}\label{eq:pso-vel}
+        v_i(t+1)=w\cdot v_i(t) + U(0,c_1)(p_i(t)-x_i(t))+U(0,c_2)(g(t)-x_i(t))
+    \end{equation}
+    donde $w$ es el peso de inercia de la velocidad \cite{gad_2022}, que puede ser un valor prefijado o 
+    $\frac{1}{2\ln{2}}$ \cite{clerc_12}, y $c_1$, $c_2$ son parámetros fijos o, alternativamente, $\frac{1}{2}+\ln{2}$
+    \cite{clerc_12}. Normalmente, se define un intervalo máximo para la velocidad de las partículas para intentar 
+    prevenir que las partículas se alejen del espacio de búsqueda, forzando una cierta velocidad máxima por etapa con 
+    la intención de que éstas peinen el espacio de búsqueda completo \cite{gad_2022}.
+    \item Para cada partícula del enjambre, se actualiza su posición:
+    \begin{equation}\label{eq:pso-pos}
+        x_i(t+1)=x_i(t)+v_i(t+1)
+    \end{equation}
+    De la misma manera que para la velocidad, se pueden establecer valores umbrales para la posición, restringiendo
+    de esta manera el movimiento de las partículas al espacio de búsqueda. Estos valores son los mismos que los $m_1$
+    y $m_2$ definidos en la inicialización.
+    \item Comprobamos, en cada partícula, si la posición actual es mejor que la mejor posición global. En caso
+    afirmativo, actualizamos ese valor.
+    \item Una vez calculados todos los valores anteriores, modificamos el valor de la mejor posición global en caso de
+    ser necesario.
+\end{enumerate}
+
+% -------------------------------------------------------------------------------------------------------------------
+\subsection{Pseudocódigo}
+
+Sea $f:\mathbb{R}^n\to\mathbb{R}$ la función objetivo que queremos minimizar. El algoritmo toma como valores de 
+entrada el número de partículas $S$, los valores umbrales de posición y velocidad $p_{\max}$ y $v_{\max}$, los valores
+de las constantes y el peso de inercia $w$, $c_1$ y $c_2$ y un número de iteraciones $T$. A partir de estos valores,
+el mínimo global $g$ se calcula como sigue en el algoritmo \ref{alg:pso}.
+
+\begin{algorithm}[htb!]
+\caption{Pseudocódigo del PSO}\label{alg:pso}
+\begin{algorithmic}[1]
+\Require $S$, $p_{\max}$, $v_{\max}$, $w$, $c_1$, $c_2$, $T$
+\Ensure $g$
+\For{$i=0,\dots,S-1$} 
+    \State Inicializamos partícula según \eqref{eq:pso-part} 
+\EndFor
+\State $g\gets (\infty,\dots,\infty)$
+\State $t\gets 1$
+\While{$t\leq T$}
+    \For{$i=0,\dots,S-1$} 
+    \State Actualizamos velocidad según \eqref{eq:pso-vel}
+    \If{$v_i>v_{\max}$}
+        \State $v_i\gets v_{\max}$
+    \ElsIf{$v_i<-v_{\max}$}
+        \State $v_i\gets -v_{\max}$
+    \EndIf
+    \State Actualizamos posición según \eqref{eq:pso-pos}
+    \If{$x_i>p_{\max}$}
+        \State $x_i\gets p_{\max}$
+    \ElsIf{$x_i<-p_{\max}$}
+        \State $x_i\gets -p_{\max}$
+    \EndIf
+    \If{$f(x_i)<f(p_i)$}
+        \State $p_i\gets x_i$
+    \EndIf
+    \If{$f(x_i)<f(g)$}
+        \State $g\gets x_i$
+    \EndIf
+    \EndFor
+    \State $t\gets t+1$
+\EndWhile
+\\\Return $g$
+\end{algorithmic}
+\end{algorithm}
+
+% -------------------------------------------------------------------------------------------------------------------
+\section{Versión distribuida: DAPSO}
+
+Una de las grandes ventajas de la optimización por enjambre de partículas es su facilidad para paralelizarse, puesto
+que como hemos visto, cada partícula se actualiza por separado, únicamente utilizando la información del resto para
+actualizar el valor de la mejor posición global. Esta ventaja, junto con uno de los problemas principales del algoritmo, la gran carga computacional que conlleva la gran cantidad de evaluaciones de la función objetivo, lo hace
+un muy buen candidato para la paralelización. Vamos ahora a comentar la versión del PSO que ha sido implementada 
+para la herramienta, distribuida y asíncrona, que utiliza los RDDs de Spark para paralelizar la actualización de
+posiciones y velocidades de las partículas. Al utilizar Spark y sus transformaciones de poca granularidad, el 
+enjambre se divide en múltiples subenjambres que se evalúan en paralelo \cite{dapso}.
+
+\begin{figure}[th!]
+    \selectcolormodel{gray}
+    \centering
+        \begin{tikzpicture}[node distance=1.5cm]
+            \node (start) [startstop] {\footnotesize Iniciar maestro};
+            \node (init_1) [process, below of=start] {\footnotesize Inicializar el enjambre y el estado};
+            \node (init_2) [process, below of=init_1] {\footnotesize Cargar las partículas iniciales en la cola};
+            \node (dist) [process, below of=init_2, yshift=-0.1cm] {\footnotesize Distribuir las partículas de la cola a los nodos esclavos};
+            \node (wait) [process, below of=dist, yshift=-0.3cm] {\footnotesize Esperar a cada partícula evaluada de los nodos esclavos};
+            \node (update_1) [process, below of=wait, yshift=-0.6cm] {\footnotesize Actualizar la mejor posición global basándose en cada partícula};
+            \node (update_2) [process, below of=update_1, yshift=-0.6cm] {\footnotesize Actualizar la posición y velocidad de cada partícula};
+            \node (dec) [decision, right of=update_2, xshift=3cm] {\footnotesize Se cumple la condición de parada};
+            \node (nop) [process, right of=dist, xshift=3cm] {\footnotesize Cargar la partícula de vuelta};
+            \node (yep) [process, below of=update_2, yshift=-0.5cm] {\footnotesize Devolver la mejor posición global};
+            \node (end) [startstop, below of=yep] {\footnotesize Finalizar maestro};
+
+            \draw [arrow] (start) -- (init_1);
+            \draw [arrow] (init_1) -- (init_2);
+            \draw [arrow] (init_2) -- (dist);
+            \draw [arrow] (dist) -- (wait);
+            \draw [arrow] (wait) -- (update_1);
+            \draw [arrow] (update_1) -- (update_2);
+            \draw [arrow] (update_2) -- (dec);
+            \draw [arrow] (dec) -- node[anchor=east] {no} (nop);
+            \draw [arrow] (nop) -- (dist);
+            \draw [arrow] (dec) |- node[anchor=north] {sí} (yep);
+            \draw [arrow] (yep) -- (end);
+        \end{tikzpicture}
+    \caption{Diagrama de flujo del nodo maestro con subenjambres de tamaño $1$.}
+    \label{fig:dapso_master}
+\end{figure}
+
+\vspace{10pt}
+En el algoritmo DAPSO, las partículas se actualizan en función del estado actual de todo el enjambre, es decir, 
+tanto la posición como la velocidad de cada partícula se modifican tan pronto como se evalúa la función de 
+\textit{fitness}, considerando de esta manera la mejor posición global encontrada hasta ese momento. Esto crea una 
+independencia total entre las partículas, que se mueven a su siguiente posición con la información de la que 
+disponen en el momento de la evaluación
+\cite{dapso}.
+
+\begin{figure}[th!]
+    \selectcolormodel{gray}
+    \centering
+        \begin{tikzpicture}[node distance=2cm]
+            \node (start) [startstop] {\footnotesize Iniciar trabajador};
+            \node (wait) [process, below of=start] {\footnotesize Esperar un subenjambre del maestro};
+            \node (eval_1) [process, below of=wait, yshift=-0.6cm] {\footnotesize Evaluar \textit{fitness} y mejor posición local de cada partícula};
+            \node (send) [process, below of=eval_1, yshift=-0.4cm] {\footnotesize Enviar subenjambre de vuelta al maestro};
+            \node (dec) [decision, right of=send, xshift=3cm] {\footnotesize Nodo maestro ha finzalizado};
+            \node (end) [startstop, below of=dec,  yshift=-1cm] {\footnotesize Finalizar trabajador};
+
+            \draw [arrow] (start) -- (wait);
+            \draw [arrow] (wait) -- (eval_1);
+            \draw [arrow] (eval_1) -- (send);
+            \draw [arrow] (send) -- (dec);
+            \draw [arrow] (dec) |- node[anchor=west] {no} (wait);
+            \draw [arrow] (dec) -- node[anchor=east] {sí} (end);
+        \end{tikzpicture}
+    \caption{Diagrama de flujo de un nodo trabajador.}
+    \label{fig:dapso_slave}
+\end{figure}
+
+\vspace{10pt}
+El algoritmo distribuido sigue el paradigma maestro-trabajador: un nodo maestro es el responsable de coordinar al 
+resto, los nodos trabajadores, que se encargan de realizar las computaciones enviadas por el maestro. Cada 
+partícula del enjambre se mueve y evalúa la \textit{fitness} de manera autónoma \cite{dapso}. En las figuras 
+\ref{fig:dapso_master} y \ref{fig:dapso_slave} pueden verse las diferentes tareas que ejecutan cada uno de estos 
+nodos.
+
+\vspace{10pt}
+Por razones de eficiencia, el algoritmo utiliza una abstracción llamada \textbf{\textit{SuperRDD}}, compuesta por un
+conjunto de partículas que son dependientes entre si y son ejecutadas en el clúster como un único subenjambre. Esto
+significa que en lugar de enviar al clúster cada partícula de forma independiente, se agrupan en subenjambres de 
+tamaño variable entre $1$ y $S$, donde $S$ es el número de partículas. Cuanto más grande el tamaño del subenjambre,
+menor el grado de asincronía del algoritmo, ya que más partículas pasan a ser dependientes unas de otras. Sin 
+embargo, esta modificación mejora la eficiencia del algoritmo, puesto que elimina parte de la sobrecarga 
+computacional de la comunicación entre los nodos en sacrificio de asíncronía, ya que el nodo maestro detiene el
+cálculo global esperando resultados parciales \cite{dapso}.
+
+\vspace{10pt}
+En el contexto de Spark, el SuperRDD consiste en la agrupación de varias partículas en un único RDD que luego es
+evaluado por el clúster. De esta manera, y conforme aumenta el número de partículas del RDD, menos trabajos de Spark
+tienen que programarse, disminuyendo la sobrecarga de comunicación, con el coste de que las partículas deben esperar
+a que el resto del RDD sea evaluado por el nodo \cite{dapso}.
+
+\vspace{10pt}
+En cuanto a la implementación en Scala y Spark, dos conceptos son clave para el correcto funcionamiento: un 
+acumulador, que reciba los datos de las partículas evaluadas (o los SuperRDDs) de nodos trabajadores y una manera de
+distribuir esas partículas a los nodos trabajadores. 
+
+\vspace{10pt}
+La implementación del acumulador se compone de un canal de comunicación (clase \texttt{Channel}) que es capaz de 
+almacenar listas de números. Hemos denominado \texttt{fuch} a este canal acumulador. Los nodos trabajadores, 
+conforme evalúan las partículas, envían a ese canal una lista que contiene la posición de la partícula, su 
+velocidad, el valor evaluado de \textit{fitness}, \dots El nodo maestro luego lee los elementos de ese canal para 
+actualizar los valores de las partículas.
+
+\begin{figure}[ht!]
+    \centering
+    \StartLineAt{43}
+    \begin{lstlisting}[language=Scala, caption={}]
+val srch = new Channel[BatchPSO]()
+val fuch = new Channel[ListBuffer[Array[Double]]]()
+    \end{lstlisting}
+    \caption{Declaración de los canales en \texttt{DAPSO.scala}.}
+    \label{fig:dapso-impl-1}
+\end{figure}
+\begin{figure}[ht!]
+    \centering
+    \StartLineAt{76}
+    \begin{lstlisting}[language=Scala]
+val iters = nIters * nParticles / batchSize
+for (i <- 0 until iters) {
+// Read from the Fitness writing channel
+var data = fuch.read
+
+var pos: Array[Double] = new Array[Double](0)
+var velocity: Array[Double] = new Array[Double](0)
+var bestGlobalPos: Array[Double] = new Array[Double](0)
+var fit: Double = 0
+
+// PSO
+for (posVel <- data) {
+  pos = posVel.slice(0, nWeights)
+  velocity = posVel.slice(nWeights, 2 * nWeights)
+  bestGlobalPos = posVel.slice(2 * nWeights, 3 * nWeights)
+  fit = posVel(3 * nWeights)
+  if (fit < bestFitness) {
+    bestFitness = fit
+    bestPos = bestGlobalPos
+  }
+}
+    \end{lstlisting}
+    \caption{Obtención de las partículas del acumulador y actualización de valores en \texttt{GlobalActor.scala}.}
+    \label{fig:dapso-impl-2}
+\end{figure}
+\begin{figure}[ht!]
+    \centering
+    \StartLineAt{53}
+    \begin{lstlisting}[language=Scala]
+// Get batch
+val batch = srch.read
+val batchData = batch.getBatch.toArray
+// Set parallelization
+val RDD = spContext.parallelize(batchData, nTasks)
+val psfu_array = RDD.map(part => calculateFitness(x, y, part, nInput, nHidden, isClas)).collect()
+    \end{lstlisting}
+    \caption{Distribución de las partículas a los nodos trabajadores en \texttt{FitnessActor.scala}.}
+    \label{fig:dapso-impl-3}
+\end{figure}
+
+\vspace{10pt}
+La distribución de las partículas a los nodos trabajadores se realiza también desde un canal de comunicación 
+formado por \textit{batches} o paquetes de partículas de un determinado tamaño (clase \texttt{BatchPSO}). Mediante 
+el uso de este canal, que hemos llamado \texttt{srch} y las funciones de paralelización de los RDD de Spark, se 
+distribuyen las partículas para ser evaluadas. Las figuras \ref{fig:dapso-impl-1}, \ref{fig:dapso-impl-2} y 
+\ref{fig:dapso-impl-3} contienen los esquemas de implementación del acumulador y el proceso de distribución. La 
+implementación del algoritmo completa se encuentra en el apéndice \ref{ap:dapso}.
+
+\vspace{10pt}
+En conclusión, el algoritmo DAPSO, al modificar las velocidades y posiciones de las partículas tan pronto como 
+evalúan su función \textit{fitness}, utilizan la mejor posición global disponible en el momento, resultando en un 
+uso más efectivo de los recursos del clúster, al minimizar el tiempo en el que un nodo se encuentra inactivo. 
+Además, este enfoque otorga al algoritmo una mayor capacidad de exploración del espacio de búsqueda, pudiendo de 
+esta manera evitar algún mínimo local \cite{dapso}.
+
+\endinput
+%--------------------------------------------------------------------
+% FIN DEL CAPÍTULO. 
+%--------------------------------------------------------------------

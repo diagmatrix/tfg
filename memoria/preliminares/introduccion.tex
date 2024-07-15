@@ -1,0 +1,134 @@
+% !TeX root = ../tfg.tex
+% !TeX encoding = utf8
+%
+%*******************************************************
+% Introducción
+%*******************************************************
+
+% \manualmark
+% \markboth{\textsc{Introducción}}{\textsc{Introducción}} 
+
+\chapter{Introducción}
+
+En las últimas décadas, los avances en el campo del aprendizaje automático o ML (\textit{machine learning} en inglés)
+han conducido a la adopción masiva de sus métodos y técnicas en el sector privado. Estas técnicas necesitan muchas veces 
+realizar cálculos repetitivos sobre grandes volúmenes de datos para obtener resultados útiles. La utilización de estas 
+técnicas supone la ejecución de operaciones que necesitan ser completadas en un tiempo ``razonable''. Conforme los 
+modelos se vuelven más complejos, el tiempo necesario para realizar los cálculos aumenta considerablemente 
+\cite{wilkinson_allen_2005}. Es por ello que la ejecución paralela y distribuida de los mencionados cálculos se ha 
+convertido en un proceso clave para que el proceso de entrenamiento sea factible y se pueda llevar a cabo 
+eficientemente. Por tanto, se hace necesaria la existencia de herramientas que faciliten esta transición a los algoritmos
+paralelos, como la presentada en este trabajo.
+
+\vspace{10pt}
+La programación adecuada de un algoritmo de entrenamiento para un modelo de aprendizaje automático no es sencilla, puesto 
+que es necesario conocer tanto las técnicas de computación paralela como las herramientas de programación (directivas o 
+instrucciones paralelas) relacionadas. Este proceso puede resultar muy complicado para personas sin conocimientos de las 
+técnicas o herramientas específicas relacionadas con el paralelismo.
+
+\vspace{10pt}
+El objetivo de este proyecto es ofrecer una herramienta que permita automatizar la distribución y paralelización, en 
+unidades de procesamiento gráficas, el proceso de aprendizaje de redes neuronales, consiguiendo de esta manera 
+suavizar la curva de aprendizaje de técnicas de paralelización para personas sin los conocimientos técnicos necesarios
+para obtener rendimiento de la programación paralela. 
+
+\vspace{10pt}
+Uno de los trabajos más importantes sobre la distribución automática en GPUs es el de Alexander Sergeev y Mike Del 
+Balso. En su trabajo detallan la creación de una librería en Python TensorFlow (un \textit{framework} para ML 
+distribuido) llamada Horovod. Conforme la cantidad de datos de los modelos aumentaba, los modelos por defecto de 
+TensorFflow generaban mucha sobrecarga de comunicación durante el proceso de aprendizaje. De esta manera, se perdía 
+mucho poder computacional de un sistema distribuido. Mediante el uso de su librería, consiguieron reducir la 
+sobrecarga hasta conseguir una capacidad computacional de un 88\% sobre las prestaciones ideales de sus sistemas 
+\cite{horovod}. El uso de Horovod, sin embargo, requiere un conocimiento previo de las funciones y directivas de 
+TensorFlow (ver \cite{tensorflow}), limitando la cantidad de posibles usuarios.
+
+\vspace{10pt}
+Otro de los trabajos importantes consultados, que han inspirado la creación de esta herramienta, es el trabajo de 
+Matei Zaharia y otros, 
+\textit{Resilient Distributed Datasets: A Fault-Tolerant Abstraction for In-Memory Cluster Computing} (ver 
+\cite{rdds}), en el que se detalla el concepto de conjuntos de datos resilientes distribuidos, RDDs en inglés, que son 
+muy útiles para la computación paralela. Esto es así puesto que agrupan conjuntos de operaciones a realizar por un mismo
+conjunto de datos inicial, evitando de esta manera la necesidad de guardar cálculos intermedios y mejorando así la 
+tolerancia a fallos y reduciendo la sobrecarga de comunicación de las operaciones. Estas abstracciones son la base de la 
+herramienta Spark, sobre la cual está definida la paralelización del proceso de aprendizaje de las redes. Estos RDDs son 
+especialmente útiles para la realización de computaciones repetitivas, que es justo el comportamiento de un algoritmo de 
+aprendizaje estándar.
+
+\vspace{10pt}
+Sobre herramientas que permiten la democratización de modelos de aprendizaje automático destacamos MADlib, una librería
+para el uso de modelos en bases de datos de forma distribuida (ver \cite{hellerstein2012madlibanalyticslibrarymad}). 
+Mediante el uso de esta librería, es posible paralelizar el proceso de entrenamiento de una red, pero no es posible
+configurar de ninguna manera esa paralelización ni controlarla, puesto que es un proceso interno de la base de datos
+sobre la que se utiliza la herramienta. También el trabajo de Tim Kraska y otros, 
+\textit{MLbase: A Distributed Machine-learning System} (ver \cite{Kraska2013MLbaseAD}), detalla una herramienta con un 
+lenguaje de alto nivel propio capaz de, a partir de una configuración sencilla, generar un modelo de ML optimizado y 
+entrenado en paralelo. Ambas herramientas implementan con eficiencia la paralelización en el aprendizaje, pero no
+discuten en ningún momento uno de los grandes problemas de la paralelización con grandes cantidades de datos, como es 
+el relacionado con la gran sobrecarga de comunicación.
+
+\vspace{10pt}
+Finalmente, caben destacar trabajos relacionados con el algoritmo de optimización por enjambre de partículas distribuido
+asíncrono, puesto que es el que se ha implementado en la herramienta. El trabajo de Riccardo Busetti, Nabil El Ioini y otros en
+\textit{A Comparison of Synchronous and Asynchronous Distributed Particle Swarm Optimization for Edge Computing} (ver
+\cite{dapso}) junto con los de Manuel I. Capel y otros en \textit{A Distributed Particle Swarm Optimization Algorithm Based on
+Apache Spark for Asynchronous Parallel Training of Deep Neural Networks} (ver \cite{dapso_2}) y \textit{GPU-Accelerated  PSO 
+for Neural Network-Based Energy Consumption Prediction} (ver \cite{dapso_3}) han sido indispensables para el desarrollo del 
+trabajo, puesto que el algoritmo de aprendizaje implementado en la herramienta ha sido el algoritmo DAPSO descrito en ellos. En 
+estos trabajos se definen los pasos para su implementación, su estructura y sus virtudes como algoritmo paralelo.
+
+\vspace{10pt}
+La herramienta creada para el trabajo combina la facilidad de uso de herramientas como MADlib con el poder analítico
+de Spark, consiguiendo de esta manera obtener una forma sencilla de automatizar el proceso de aprendizaje de redes
+neuronales en GPUs de forma distribuida sin necesitar conocimientos amplios sobre computación paralela o GPUs, pero
+manteniendo un cierto control sobre el uso de los recursos paralelos.
+
+\vspace{10pt}
+Los objetivos incialmente propuestos del trabajo son los siguientes: En primer lugar, la transformación automática de 
+secciones de código secuencial de entrenamiento de redes neuronales mediante llamadas a librerías específicas también 
+implementadas en el trabajo que hagan posible la paralelización con GPUs. En segundo lugar, la construcción de un 
+intérprete a código de funciones seleccionadas que incluyen código paralelizado para su ejecución en GPUs. En tercer
+lugar, aplicar conocimientos de la teoría matemática fundamental de compiladores y autómatas para automatizar el 
+proceso de paralelización anterior. Finalmente, conseguir suavizar la curva de aprendizaje de técnicas de 
+paralelización para personas sin un conocimiento a bajo nivel del hardware de los procesadores GPU.
+
+\vspace{10pt}
+De los objetivos propuestos, se ha conseguido crear una librería en Scala específica que implementa redes neuronales
+entrenables en GPUs de forma distribuida. Se ha generado también, mediante el uso de una gramática libre de contexto,
+un lenguaje específico de dominio capaz de expresar las redes de la librería implementada. Se ha conseguido también
+implementar parte del intérprete: el analizador léxico y el \textit{parser}, que genera un árbol de sintaxis abstracta
+a partir del código escrito. En cuanto a la suavización de la curva de aprendizaje de las técnicas de paralelización,
+podemos decir que se ha conseguido realizar para aquellas personas con conocimientos del lenguaje Scala que sean capaces
+de utilizar la librería implementada.
+
+\vspace{10pt}
+Para comprobar que los resultados obtenidos son correctos, hemos puesto a prueba la librería implementada. Para ello,
+se han realizado dos experimentos con las clases y funciones implementadas, con el objetivo de comprobar si el uso del
+algoritmo distribuido con Spark es capaz de entrenar esas redes en un tiempo menor y con un mayor potencial de 
+escalabilidad que con un algoritmo secuencial. Para el lenguaje creado, hemos comprobado que, a partir de unos ejemplos 
+de posible código, el analizador léxico detecta correctamente las palabras válidas del lenguaje y el \textit{parser} es 
+capaz de construir árboles de sintaxis abstracta para esos códigos.
+
+\vspace{10pt}
+En esencia, este trabajo intenta, proporcionar una herramienta potente para la distribución automática de redes 
+neuronales para aquellas personas sin los conocimientos específicos de la computación paralela, así como dar una visión 
+más abstracta y matemática a conceptos tan utilizados como la gramática de un lenguaje o los intérpretes.
+
+\vspace{10pt}
+El trabajo se divide en dos partes: una relacionada con las redes neuronales, computación paralela y el algoritmo de 
+optimización por enjambre de partículas y otra, más formal, sobre la teoría de lenguajes y autómatas. Comenzaremos en 
+la primera parte introduciendo el tipo de redes neuronales que implementa la herramienta en el \autoref{chap:ann}, 
+donde discutiremos también su validez como aproximadores de las soluciones. Después daremos unas nociones básicas de 
+paralelismo y Spark en el \autoref{chap:paralel}. Finalizaremos esa parte con la descripción del algoritmo de 
+aprendizaje paralelo implementado en la librería creada en el \autoref{chap:pso}.
+
+\vspace{10pt}
+En la segunda parte, primero introduciremos los conceptos básicos de lenguaje y gramática formal en el 
+\autoref{chap:leng}. Después, en el capítulo \autoref{chap:AF} introduciremos los autómatas finitos y los lenguajes
+regulares, seguido de las gramáticas libres de contexto y los autómatas de pila en el \autoref{chap:CFG}. Finalmente
+hablaremos del lenguaje específico creado para la herramienta en el \autoref{chap:DSL}.
+
+%De acuerdo con la comisión de grado, el TFG debe incluir una introducción en la que se describan claramente los %objetivos previstos inicialmente en la propuesta de TFG, indicando si han sido o no alcanzados, los antecedentes %importantes para el desarrollo, los resultados obtenidos, en su caso y las principales fuentes consultadas.
+
+%Ver archivo \texttt{preliminares/introduccion.tex}
+
+\endinput

@@ -1,0 +1,6 @@
+/* Configuración de DAPSO */
+begin dapso: dapso1
+    set particles 50
+    set pos_bound 2.0
+    set batch_size 10
+end

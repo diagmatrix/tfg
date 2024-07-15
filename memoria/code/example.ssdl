@@ -1,0 +1,56 @@
+/*
+Construcción de algoritmos
+*/
+begin dapso: dapso1
+    set particles 100
+    set pos_bound 1.0
+    set vel_c1 0.4
+    set vel_c2 0.2
+end
+
+begin dapso: dapso2
+    set particles 100
+    set pos_bound 1.0
+    set vel_c1 0.4
+    set vel_c2 0.2
+    set n_rdd 2
+end
+
+/*
+Redes neuronales
+*/
+
+/* Regresor */
+begin ann: reg1
+    set type regressor
+    set neurons [8,15]
+    set data ["abalone_train.csv","abalone_test.csv"]
+    set algorithm dapso1
+end
+
+/* Clasificador */
+begin ann: clas1
+    set type classifier
+    set neurons [30,90]
+    set data ["cancer_train.csv","cancer_test.csv"]
+    set algorithm dapso2
+end
+
+/*
+Entrenamiento para distintas iteraciones
+*/
+fit reg1 50
+out reg1 "reg_50.csv"
+fit reg1 100
+out reg1 "reg_100.csv"
+fit reg1 200
+out reg1 "reg_200.csv"
+
+fit clas1 50
+out clas1
+fit clas1 60
+out clas1
+fit clas1 80
+out clas1
+fit clas1 100
+out clas1

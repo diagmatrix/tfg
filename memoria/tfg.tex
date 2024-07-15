@@ -1,0 +1,103 @@
+% !TEX program = pdflatex
+% !TEX encoding = UTF-8 Unicode
+
+% Plantilla, basada en la clase `scrbook` del paquete KOMA-script,  para la elaboración de un TFG siguiendo las directrices del la comisión del Grado en Matemáticas de la Universidad de Granada.
+
+% Francisco Torralbo Torralbo
+
+\documentclass[print, color]{ugrTFG}
+
+% VERSIÓN ELECTRÓNICA PARA TABLETA
+% Cambiando la opción "print" por "tablet" generaremos un pdf adaptado para leerlo en tabletas de 9 pulgadas.
+
+% -------------------------------------------------------------------
+% INFORMACIÓN DEL TFG Y EL AUTOR
+% -------------------------------------------------------------------
+
+\newcommand{\miTitulo}{Distribución automática en múltiples máquinas del proceso de aprendizaje para redes neuronales\xspace}
+\newcommand{\miNombre}{Manuel Gachs Ballegeer\xspace}
+\newcommand{\miGrado}{Doble Grado en Ingeniería Informática y Matemáticas}
+\newcommand{\miFacultad}{Facultad de Ciencias \\ Escuela Técnica Superior de Ingenierías Informática y de Telecomunicación}
+\newcommand{\miUniversidad}{Universidad de Granada}
+
+% Añadir tantos tutores como sea necesario separando cada uno de ellos mediante el comando `\medskip` y una línea en blanco
+\newcommand{\miTutor}{
+  Manuel Isidoro Capel Tuñón \\ \emph{Departamento de Lenguajes y Sistemas Informáticos} 
+
+  % Añadir tantos tutores como sea necesario. 
+
+  \medskip
+}
+\newcommand{\miCurso}{2023-2024\xspace}
+
+\hypersetup{
+	pdftitle={\miTitulo},
+	pdfauthor={\textcopyright\ \miNombre, \miFacultad, \miUniversidad}
+}
+
+\begin{document}
+
+\maketitle
+
+% -------------------------------------------------------------------
+% FRONTMATTER
+% -------------------------------------------------------------------
+\frontmatter % Desactiva la numeración de capítulos y usa numeración romana para las páginas
+
+\input{preliminares/declaracion-originalidad} 
+\input{preliminares/tablacontenidos}            
+\input{preliminares/agradecimientos}            % Opcional
+
+\input{preliminares/summary}                    
+\input{preliminares/introduccion}               
+
+% -------------------------------------------------------------------
+% MAINMATTER
+% -------------------------------------------------------------------
+\mainmatter % activa la numeración de capítulos, resetea la numeración de las páginas y usa números arábigos
+
+\part{Redes neuronales y paralelismo}
+\input{capitulos/ann-spark/perceptron-multicapa}
+\input{capitulos/ann-spark/paralelismo}
+\input{capitulos/ann-spark/pso}
+
+\part{Lenguajes y autómatas}
+\input{capitulos/lenguajes-automatas/lenguajes-gramaticas}
+\input{capitulos/lenguajes-automatas/automatas-regulares}
+\input{capitulos/lenguajes-automatas/automatas-libres-contexto}
+\input{capitulos/lenguajes-automatas/especificacion}
+
+\part{Resultados y conclusiones}
+\input{capitulos/resultados/resultados-futuro}
+\input{capitulos/resultados/conclusiones}
+
+% -------------------------------------------------------------------
+% APPENDIX: Opcional
+% -------------------------------------------------------------------
+
+\part{Apéndices}
+\appendix % Reinicia la numeración de los capítulos y usa letras para numerarlos
+\input{apendices/ann}
+\input{apendices/dapso}
+\input{apendices/ssdl}
+\input{apendices/ssld_antlr}
+% \input{apendices/apendice-ejemplo}
+% Añadir tantos apéndices como sea necesario 
+
+% -------------------------------------------------------------------
+% BACKMATTER
+% -------------------------------------------------------------------
+
+% \backmatter % Desactiva la numeración de los capítulos
+% \pdfbookmark[-1]{Referencias}{BM-Referencias}
+
+% BIBLIOGRAFÍA
+%-------------------------------------------------------------------
+
+\bibliographystyle{alpha-es} 
+\begin{small} 
+  \bibliography{library.bib}
+\end{small}
+
+
+\end{document}

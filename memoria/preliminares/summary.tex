@@ -1,0 +1,53 @@
+% !TeX root = ../tfg.tex
+% !TeX encoding = utf8
+%
+%*******************************************************
+% Summary
+%*******************************************************
+
+\selectlanguage{english}
+\chapter{Summary}
+
+Today, advances in the field of machine learning (ML) have led to the massive adoption of their models in the private 
+sector. There, they are used to solve many practical problems: from predicting the behaviour of certain processes to 
+preticting images or patterns. These techniques usually require a great deal of computing power because they have to 
+provide reasonable results in a limited amount of time. Another reason for this requirement is the vast amount of data 
+available to companies, which is far greater than that which can be collected or managed by a single individual. This is 
+why parallel computing has become the key to the success of ML.
+
+\vspace{10pt}
+Parallel computing in machine learning is commonly used for training models, such as neural networks, either by 
+distributing the computations across multiple machines or by using multiple GPUs. However, this parallelization 
+process is not easy to perform efficiently, as it requires specific knowledge and training for its effective 
+implementation.
+
+\vspace{10pt}
+The objective of this paper is to present a tool designed to facilitate the parallelization of the training process of
+artificial neural networks, thus smoothing the learning curve of parallelism techniques to people trying to use
+parallel computing in ML applications and models with good performance.
+
+\vspace{10pt}
+The proposed tool itself is an interpreter that, given a specification of a set of parameters for the training 
+algorithm, the configuration of a neural network and the relevant datasets, builds a neural network that uses parallel
+computing for its training. This tool uses Spark, an analytics engine built for big data and GPU computing.
+
+\vspace{10pt}
+This project consists of the following steps: First, a library of functions is built in the Scala programming 
+language, implementing the basic neural networks, as well as at least one useful algorithm for parallelizing the 
+distributed training of the networks that have been implemented using Spark. Next, a specification languages for the 
+interpreter will be created using formal language and automata theory. Finally, such an interpreter is developed.
+
+\vspace{10pt}
+In the first part of this book, we will first summarize the fundamentals of feed-forward neural networks: their 
+components and a small part of the properties that have led to their success, namely their universal aproximation 
+capabilities, since they can approximate any continuous function to any degree, provided the number of hidden neurons 
+is big enough and the weights are appropiate. In the next chapter, we define the basic concepts of parallel computing, 
+giving a brief overview of Spark and its special distributed abstraction, the RDDs or Resilient Distributed Datasets. 
+Afterwards, we will dive into formal languages and automata theory, following a strictly mathematical approach, where we 
+will highlight regular languages and finite automaton, for their use as parsers, and context-free grammar, as they are the 
+base of programming languages. Finally, we describe the domain specific language we have created as the basis of the 
+proposed tool, as well as the results obtained.
+
+% Al finalizar el resumen en inglés, volvemos a seleccionar el idioma español para el documento
+\selectlanguage{spanish} 
+\endinput

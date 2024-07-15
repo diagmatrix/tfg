@@ -1,0 +1,57 @@
+% !TeX root = ../tfg.tex
+% !TeX encoding = utf8
+
+\chapter{Conclusiones}
+
+Al terminar el trabajo, quedan algunos objetivos por cumplir, principalmente la finalización del intérprete. Sin embargo,
+se ha conseguido realizar, en primer lugar, una librería en Scala que permite automatizar el proceso de aprendizaje de
+redes neuronales mediante algoritmos distribuidos. También se ha conseguido generar una gramática para el lenguaje de la
+herramienta, así como el analizador léxico y el \textit{parser} del intérprete.
+
+\vspace{10pt}
+Es interesante resaltar la diferencia en la sintaxis de ese lenguaje frente al usual para las técnicas de ML, Python.
+Las restricciones que presenta Scala con su tipado fuerte, frente al de Python, junto con el énfasis de Scala en la
+inmutabilidad y el paradigma de programación funcional, parecen resultar, más que un impedimento, una ayuda involuntaria
+para mejorar la fiabilidad de un modelo de aprendizaje automático. Para las redes neuronales, que presentan una cierta
+complejidad a la hora de su configuración y requieren una inversión en tiempo para su entrenamiento, es importante
+asegurarse de la validez del código escrito antes de su funcionamiento. Es por ello que un lenguaje como Scala, que
+requiere de un trabajo previo a la ejecución más concienzudo puede ser un buen candidato como lenguaje a utilizar para
+el aprendizaje automático.
+
+\vspace{10pt}
+La aproximación a los lenguajes de programación y los intérpretes desde un punto de vista formal ha dado una visión distinta
+del funcionamiento y componentes de los mismos. El visualizar un lenguaje de programación como el generado por una gramática
+libre de contexto permite entenderlos desde una perspectiva más abstracta que permite entender los patrones generales de
+diseño de los mismos.
+
+\vspace{10pt}
+Finalmente, cabe destacar que el objetivo último de este trabajo es intentar democratizar de alguna manera las técnicas de
+ML para su uso por personas sin conocimientos específicos. Dada la tendencia actual de adopción en masa por todos los
+sectores de la sociedad, una herramienta así puede ser de gran ayuda para limitar el impacto que pueden provocar en las
+personas más alejadas de este campo de la ingeniería.
+
+% -------------------------------------------------------------------------------------------------------------------
+\section{Futuros trabajos}
+
+Aunque se han alcanzado algunos de los objetivos propuestos, no se ha podido completar la herramienta originalmente
+ideada para el problema a resolver. Por tanto, el principal trabajo futuro a realizar es la finalización del intérprete
+de SSDL.
+
+\vspace{10pt}
+Sería deseable también ampliar el número de algoritmos distribuidos de la librería implementada. Puesto que se ha 
+construido una interfaz para ellos, no debería ser muy complicado implementar nuevos algoritmos (sin tener en cuenta la
+dificultad de implementación inherente que puedan tener). Para incluirlos en el lenguaje, simplemente tendría que 
+expandirse la producción \textlangle object\textrangle, añadiendo en nombre del algoritmo como posible parte derecha y
+añadir producciones para los parámetros específicos del mismo.
+
+\vspace{10pt}
+De la misma manera, un futuro trabajo podría ser la ampliación de tipos de modelos de aprendizaje automático soportados
+por la herramienta. Actualmente solamente es capaz de expresar redes neuronales prealimentadas con una capa oculta, pero
+se podría generalizar a redes neuronales prealimentadas, y de ahí a otro tipo de redes más complejas, como las 
+convolucionales. El procedimiento para incorporarlas al lenguaje sería similar: habría que expandir de nuevo la producción
+de \textlangle object\textrangle, así como crear las producciones con los parámetros específicos de ese tipo de redes.
+
+\endinput
+%--------------------------------------------------------------------
+% FIN DEL CAPÍTULO. 
+%--------------------------------------------------------------------
