@@ -1,0 +1,50 @@
+% !TeX root = ../tfg.tex
+% !TeX encoding = utf8
+
+\chapter{Gramática del lenguaje en la sintaxis de ANTLR}\label{ap:ssdl_g4}
+
+\StartLineAt{1}
+\lstset{ %
+  texcl=true,
+  escapeinside={//}{\^^M},
+}
+\begin{lstlisting}[language=Java,texcl=false]
+/**
+ * GRAMMAR FOR SCALA-SPARK DISTRIBUTED LEARNING
+ */
+grammar ssdl;
+program: (stmt|COMMENT)+;
+stmt:
+    'begin' action 'end'
+    |'fit' ID INT
+    |'out' ID FILE?;
+action: OBJECT ':' ID parameter+;
+parameter: 'set' (ann_argument|dapso_argument);
+ann_argument:
+    'type' NET_TYPE
+    |'neurons' '['INT','INT']'
+    |'data' '['FILE','FILE']'
+    |'algorithm' ID;
+dapso_argument:
+    'particles' INT
+    |'batch_size' INT
+    |'n_rdd' INT
+    |'pos_bound' FLOAT
+    |'vel_bound' FLOAT
+    |'vel_w' FLOAT
+    |'vel_c1' FLOAT
+    |'vel_c2' FLOAT;
+OBJECT: 'ann' | 'dapso';
+NET_TYPE: 'classifier' | 'regressor';
+COMMENT: '/*' .*? '*/' -> skip;
+INT: [0-9]+;
+FLOAT: INT '.' INT | INT;
+ID: [a-zA-Z0-9]+;
+FILE: '"'.+?'.csv"';
+WS: [ \t\r\n]+ -> skip;
+\end{lstlisting}
+
+\endinput
+%------------------------------------------------------------------------------------
+% FIN DEL APÉNDICE. 
+%------------------------------------------------------------------------------------

@@ -1,0 +1,10 @@
+/* Configuración de red neuronal */
+begin ann: clas1
+    set type classifier
+    set neurons [50,200]
+    set data ["covid_training.csv","covid_test.csv"]
+    set algorithm dapso1
+end
+/* Entrenamiento */
+fit clas1 100
+out clas1 "clasificador_100.csv"

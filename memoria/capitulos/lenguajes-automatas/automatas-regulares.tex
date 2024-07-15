@@ -1,0 +1,834 @@
+% !TeX root = ../tfg.tex
+% !TeX encoding = utf8
+
+\chapter{Autómatas finitos}\label{chap:AF}
+
+Cuando se define un lenguaje, como el creado para la herramienta, existen ciertas construcciones de símbolos que
+constituyen palabras reservadas a ciertos comportamientos, otras a variables, \dots El conjunto de todas estas palabras
+se denominan \textit{tokens}, y son la base para la compilación o interpretación de cualquier lenguaje de programación.
+Ejemplos de \textit{tokens} usuales en la programación pueden ser ``begin'', ``while'', ``var'', \dots
+
+\vspace{10pt}
+El paso de un archivo a un conjunto de tokens suele realizarse por un programa de análisis léxico o \textit{lexer}. 
+Este tipo de programas lee secuencialmente un archivo y va generando una lista a partir del mismo con las palabras del
+programa. Es posible formalizar este proceso: podemos definir una cierta clase de lenguajes y gramáticas que compongan
+los \textit{tokens} del lenguaje de programación, y un cierto tipo de máquinas, los 
+\textbf{\textit{autómatas finitos}}, que se encargan de generar esas palabras a partir del archivo. En esencia, un
+analizador léxico es un autómata finito.
+
+\vspace{10pt}
+Los autómatas finitos han sido utilizados en electrodomésticos desde hace casi un siglo. La primera definición formal
+de los mismos apareció en 1943 en los modelos de McChulloch-Pits de redes neuronales. Muchos trabajos sobre la década
+de 1950 establecieron la mayoría de sus propiedades básicas, incluyendo su interpretación como generadores de lenguajes 
+e intérpretes de expresiones regulares. No fue hasta el desarrollo de los sistemas operativos, como Unix, en los años 
+70, que los autómatas comenzaron a utilizarse de manera práctica para el análisis léxico y búsquedas de texto 
+\cite{wolfram_2018}.
+
+% -------------------------------------------------------------------------------------------------------------------
+\section{Lenguajes regulares}
+
+Antes de hablar de los autómatas finitos, definiremos la clase de lenguajes que son capaces de ``leer'': los
+\textbf{\textit{lenguajes regulares}}. Veremos más adelante, mediante el Teorema de Kleene, la relación explícita entre
+ellos y los autómatas.
+
+\begin{definicion}[Lenguaje regular] Se dice que un lenguaje $L$ sobre $\Sigma$ es \textit{regular} cuando se puede 
+obtener a partir de los lenguajes $\emptyset$ y $\{a\}$, donde $a\in\Sigma$, aplicando sobre ellos un número finito de
+uniones, intersecciones y clausuras.
+\end{definicion}
+
+Una familia de lenguajes regulares sobre un alfabeto $\Sigma$ es el conjunto de lenguajes regulares sobre ese alfabeto.
+Las operaciones de unión, intersección y complemento, junto a otras, como la concatenación, son cerradas para esta 
+familia \cite{Mateescu1997}.
+
+\vspace{10pt}
+Otra manera de definir la familia de lenguajes regulares sobre un alfabeto es la siguiente:
+
+\begin{definicion}\label{def:familia-regulares}Sea $\Sigma$ un alfabeto. La familia de lenguajes regulares sobre 
+$\Sigma$ se define recursivamente de la siguiente manera:
+\begin{enumerate}[(i)]
+    \item $\emptyset$ es un lenguaje regular.
+    \item $\{\lambda\}$ es un lenguaje regular.
+    \item Para todo $a\in\Sigma$, $\{a\}$ es un lenguaje regular.
+    \item Si $L_1$ y $L_2$ son lenguajes regulares, entonces $L_1\cup L_2$, $L_1L_2$ y $L_1^*$ son lenguajes 
+    regulares.
+    \item Ningún otro lenguaje sobre $\Sigma$ es regular.
+\end{enumerate}
+De esta manera, podemos describir todos los lenguajes regulares posibles sobre $\Sigma$ \cite{kelley_2001}.
+\end{definicion}
+
+% -------------------------------------------------------------------------------------------------------------------
+\subsection{Expresiones regulares}
+
+La especificación de un lenguaje regular puede ser simplificada mediante una abreviatura de su notación, que llamaremos
+\textit{expresión regular}. Para ello, definimos las siguientes notaciones:
+
+\begin{itemize}
+    \item $a$ denota el lenguaje unitario $\{a\}$.
+    \item $a\cup b$ denota $\{a,b\}=\{a\}\cup\{b\}$.
+    \item $ab$ denota $\{ab\}$.
+    \item $a^*$ o $a*$ denota $\{a\}^*$.
+    \item $a^+$ o $a+$ denota $\{a\}^+$.
+\end{itemize}
+
+Además, establecemos el siguiente orden de precedencia sobre los operadores sobre lenguajes: en primer lugar la
+clausura, seguida por la concatenación y la unión. Este orden reduce la necesidad del uso de paréntesis. Por ejemplo,
+el lenguaje $(\{a\}\{b\}^*)\cup(\{c\}\{a\}^+)$ se reduce a la expresión regular $ab^*\cup ca^+$ \cite{kelley_2001}.
+
+\vspace{10pt}
+Una definición más formal de una expresión regular es la siguiente:
+
+\begin{definicion}[Expresión regular] Las \textit{expresiones regulares} sobre un lenguaje $\Sigma$ se definen 
+recursivamente como:
+\begin{enumerate}[(a)]
+    \item $\emptyset$ y $\lambda$ son expresiones regulares.
+    \item $a$ es una expresión regular $\forall a\in\Sigma$.
+    \item Si $w$, $v$ son expresiones regulares, entonces $w\cup v$, $wv$ y $r^*$ también lo son.
+    \item Ninguna otra secuencia de símbolos es una expresión regular.
+\end{enumerate}
+Podemos ver que $\emptyset^*=\lambda$, por lo que se podría omitir $\lambda$ de la definición. Sin embargo, puesto que
+$\lambda$ es una forma de abreviar $\emptyset^*$, se incluye por conveniencia. De la misma manera, se abreviará la 
+expresión $ww^*$ por $w^+$, aunque no aparezca en la definición como expresión regular de manera explícita
+\cite{kelley_2001}.
+\end{definicion}
+
+Comparando esta definición con la de la familia de lenguajes regulares, podemos deducir que existe una equivalencia
+entre ambas, es decir, toda expresión regular denota un lenguaje regular y viceversa. Cuando sea necesario distinguir
+entre una expresión regular $r$ y el lenguaje que especifica, denotaremos al lenguaje por $L(r)$. Si $r$ y $s$ son
+expresiones regulares sobre el mismo alfabeto, y $L(r)=L(s)$, diremos que $r$ y $s$ son equivalentes, y lo denotaremos
+como $r=s$ \cite{kelley_2001}.
+
+\section{Autómatas finitos deterministas}
+
+Comenzamos ahora a introducir los distintos tipos de autómatas finitos, empezando por los más sencillos: los
+\textbf{\textit{autómatas finitos deterministas}} o \textbf{\textit{AFD}}.
+
+\begin{definicion}[Autómata finito determinista]Un \textit{autómata finito determinista (AFD)} es una quíntupla 
+$(Q,\Sigma,q_0,\delta,A)$, donde:
+\begin{enumerate}[(i)]
+    \item $Q$ es un conjunto finito de \textit{estados}.
+    \item $\Sigma$ es un alfabeto de entrada.
+    \item $q_0$ es el estado inicial ($q_0\in Q$) o conjunto de estados iniciales ($q_0\subset Q$).
+    \item $\delta:Q\times\Sigma\to Q$ es una función que asigna un estado de forma única a cada par de estados y 
+    símbolos de entrada, es decir, dado $q,q'\in Q$ y $\sigma\in\Sigma$, $\delta(q,\sigma)=q'$ y no existe 
+    $q''\in Q$ tal que $\delta(q,\sigma)=q''$.
+    \item $A\subseteq Q$ es el conjunto de \textit{estados finales} o \textit{aceptación}.    
+\end{enumerate}
+\end{definicion}
+
+Veamos un ejemplo de este tipo de autómatas. Vamos a construir un autómata que sea capaz de reconocer el lenguaje
+definido como
+\begin{equation}
+    L=\{x\in\{0,1\}^*\mid x\text{ termina en }1\text{ y no contiene la subcadena }00\}
+\end{equation}
+Este autómata va a ir examinando una cadena carácter a carácter hasta un punto en el que decidirá si la cadena forma
+parte del lenguaje o no. En primer lugar, vamos a definir el caso más sencillo, cuando la subcadena $00$ ocurre.
+A este estado lo denotaremos como $N$.
+
+\vspace{10pt}
+Si $00$ no ha ocurrido mientras que la cadena esta siendo leída, existen dos posibles casos: $L0$ cuando el último
+símbolo leído es $0$ y $L1$ cuando es $1$, donde podemos asumir que la cadena pertenece al lenguaje $L$. El único
+caso posible que nos queda es $\lambda$. Este caso es especial, puesto que sólo ocurre al inicio, cuando no se ha leído
+ningún símbolo \cite{chakraborty_2003}. Podemos, entonces, definir el autómata como sigue:
+\begin{enumerate}[(i)]
+    \item $Q=\{\lambda,L0,L1,N\}$
+    \item $\Sigma=\{0,1\}$
+    \item $q_0=\lambda$
+    \item $A=\{L1\}$
+    \item $\delta$ es la función de transición entre estados 
+    $\delta:Q\times\Sigma\to Q$ tal que:
+    \begin{align*}
+        \delta(\lambda,0)&=L0 & \delta(\lambda,1)&=L1 & \delta(N,0)&=N & \delta(N,1)&=N \\
+        \delta(L0,0)&=N & \delta(L0,1)&=L1 & \delta(L1,0)&=L0 & \delta(L1,1)&=L1
+    \end{align*}
+\end{enumerate}
+
+Podemos representar a este autómata mediante un grafo de la siguiente manera (figura \ref{fig:afd}):
+
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture} [node distance = 2cm, on grid, auto]
+\node (lambda) [state, initial, initial text = {} ] {$\lambda$};
+\node (L0) [state, above right = of lambda] {$L0$};
+\node (L1) [state, accepting, below right = of lambda] {$L1$};
+\node (N) [state, right = of L0] {$N$};
+
+\path [-stealth, thick]
+    (lambda) edge node {$0$} (L0)
+    (lambda) edge [pos=0.15] node {$1$} (L1)
+    (L0) edge node {$0$} (N)
+    (L0) edge [bend right] node {$1$} (L1)
+    (L1) edge [bend right] node {$0$} (L0)
+    (L1) edge [loop right] node {$1$}()
+    (N) edge [loop right] node {$0,1$}();
+\end{tikzpicture}
+\caption{Representación gráfica de un autómata finito determinista.}\label{fig:afd}
+\end{figure}
+
+Una vez tenemos definido un autómata finito determinista, podemos definir los lenguajes que puede ``leer''. Diremos 
+que, si $M$ es un AFD, entonces el \textit{lenguaje aceptado} por $M$ es
+\begin{equation}
+    L(M)=\{w\in \Sigma^*\mid w\text{ es aceptada por }M\}
+\end{equation}
+es decir, el conjunto de cadenas que hacen que $M$ pase de su estado inicial a un estado de aceptación 
+\cite{kelley_2001}. Tomando el ejemplo anterior, podemos ver que $1$, $101$ y $10111$ pertenecen al lenguaje aceptado 
+por ese AFD. En particular, podemos escribir $101$ como $\delta(\delta(\delta(\lambda,1),0),1)$. Para abreviar 
+notación, podemos escribir esa composición como $\delta(\lambda,101)$.
+
+\begin{definicion}Sean $M_1$ y $M_2$ dos AFD, diremos que son \textit{equivalentes} si $L(M_1)=L(M_2)$.
+\end{definicion}
+
+Por ejemplo, tomando dos AFD $M_1$ y $M_2$ sobre el alfabeto $\{a\}$, con las siguientes representaciones:
+\begin{figure}[h!]
+     \centering
+     \begin{subfigure}[b]{0.4\textwidth}
+         \centering
+         \begin{tikzpicture} [node distance = 2cm, on grid, auto]
+            \node (Q1) [state, initial, initial text = $M_1$, scale = 0.6 ] {$Q_1$};
+            \node (Q2) [state, accepting, right = of Q1, scale = 0.6] {$Q_2$};
+            \path [-stealth, thick]
+                (Q1) edge node {$a$} (Q2)
+                (Q1) edge [loop above] node {$a$} ();
+         \end{tikzpicture}
+     \end{subfigure}
+     \hspace{3em}
+     \begin{subfigure}[b]{0.4\textwidth}
+         \centering
+         \begin{tikzpicture} [node distance = 2cm, on grid, auto]
+            \node (Q1) [state, initial, initial text = $M_2$, scale = 0.6 ] {$Q_1$};
+            \node (Q2) [state, accepting, right = of Q1, scale = 0.6] {$Q_2$};
+            \path [-stealth, thick]
+                (Q1) edge node {$a$} (Q2)
+                (Q2) edge [loop above] node {$a$} ();
+         \end{tikzpicture}
+     \end{subfigure}
+        \caption{Representación de dos AFDs ($M_1$ y $M_2$) equivalentes.}
+        \label{fig:afd-equivalentes}
+\end{figure}
+
+Ambos aceptan el lenguaje $a^+$ y, por tanto, son equivalentes. Podemos ver, sin embargo, que el autómata $M_3$ dado
+por el diagrama \ref{fig:afd-nequivalente} no es equivalente a $M_1$ y $M_2$, puesto que acepta la cadena vacía, al 
+ser su estado inicial también un estado de aceptación \cite{kelley_2001}.
+\begin{figure}[ht!]
+     \centering
+     \begin{tikzpicture} [node distance = 2cm, on grid, auto]
+        \node (Q1) [state, initial, accepting, initial text = $M_3$, scale = 0.6 ] {$Q_1$};
+        \path [-stealth, thick]
+                (Q1) edge [loop right] node {$a$} ();
+     \end{tikzpicture}
+     \caption{Representación de $M_3$.}
+        \label{fig:afd-nequivalente}
+\end{figure}
+
+% -------------------------------------------------------------------------------------------------------------------
+\section{Autómatas finitos no deterministas}
+
+Si permitimos a un autómata realizar cero, una o más transiciones mediante el mismo símbolo de entrada, entonces
+tenemos un nuevo tipo de autómatas finitos a los que llamaremos \textit{no deterministas}. En muchas ocasiones,
+resulta más conveniente utilizar este nuevo tipo de autómatas en lugar de los finitos deterministas, ya que suele
+disminuir el número de estados o transiciones necesarias para representar un mismo lenguaje.
+
+\begin{definicion}[Autómata finito no determinista]Un \textit{autómata finito no determinista (AFN)} es una quíntupla 
+$(Q,\Sigma,q_0,\Delta,A)$, donde:
+\begin{enumerate}[(i)]
+    \item $Q$ es un conjunto finito de \textit{estados}.
+    \item $\Sigma$ es un alfabeto de entrada.
+    \item $q_0$ es el estado inicial ($q_0\in Q$).
+    \item $\Delta$ es una relación sobre $(Q\times\Sigma)\times Q$ y se llama \textit{relación de transición}.
+    \item $A\subseteq Q$ es el conjunto de \textit{estados finales} o \textit{aceptación}.    
+\end{enumerate}
+Observamos que, para todo par $(q,\sigma)$ con $\sigma\in\Sigma$, $\Delta(q,\sigma)\subseteq Q$, por lo que para todo 
+estado $q$ se pueden tener cero o más alternativas a elegir como estado siguiente utilizando el mismo símbolo de 
+entrada \cite{kelley_2001}.
+\end{definicion}
+
+Veamos ahora un ejemplo de un autómata finito no determinista, y la ventaja en cuanto a simplicidad que ofrece en
+comparación con un AFD. Sea $L$ un lenguaje definido como la expresión regular $(0\cup 1)^*(000\cup 111)(0\cup 1)^*$,
+construimos ambos autómatas (figuras \ref{fig:afd-dvsnd} y \ref{fig:afn-dvsnd}).
+\begin{figure}[htb!]
+\centering
+\begin{tikzpicture} [node distance = 2cm, on grid, auto]
+\node (q0) [state, initial, initial text = {}, scale = 0.7 ] {$q_0$};
+\node (q1) [state, above right = of q0, scale = 0.7 ] {$q_1$};
+\node (q2) [state, below right = of q0, scale = 0.7 ] {$q_2$};
+\node (q3) [state, right = of q1, scale = 0.7 ] {$q_3$};
+\node (q4) [state, right = of q2, scale = 0.7 ] {$q_4$};
+\node (T) [state, accepting, scale = 0.7 ] at (5,0){$T$};
+
+\path [-stealth, thick]
+    (q0) edge node {$0$} (q1)
+    (q0) edge [pos=0.2] node {$1$} (q2)
+    (q1) edge node {$0$} (q3)
+    (q1) edge [bend right] node {$1$} (q2)
+    (q2) edge [bend right] node {$0$} (q1)
+    (q2) edge node {$1$} (q4)
+    (q3) edge node {$0$} (T)
+    (q3) edge [pos=0.2] node {$1$} (q2)
+    (q4) edge [pos=0.3] node {$0$} (q1)
+    (q4) edge node {$1$} (T)
+    (T) edge [loop right] node {$0,1$} ();
+    
+\end{tikzpicture}
+\caption{AFD para el lenguaje $L$.}\label{fig:afd-dvsnd}
+\end{figure}
+
+\begin{figure}[htb!]
+\centering
+\begin{tikzpicture} [node distance = 2cm, on grid, auto]
+\node (q0) [state, initial, initial text = {}, scale = 0.7 ] {$q_0$};
+\node (q1) [state, above right = of q0, scale = 0.7 ] {$q_1$};
+\node (q2) [state, below right = of q0, scale = 0.7 ] {$q_2$};
+\node (q3) [state, right = of q1, scale = 0.7 ] {$q_3$};
+\node (q4) [state, right = of q2, scale = 0.7 ] {$q_4$};
+\node (T) [state, accepting, scale = 0.7 ] at (5,0){$T$};
+
+\path [-stealth, thick]
+    (q0) edge [loop below] node {$0,1$} ()
+    (q0) edge node {$0$} (q1)
+    (q0) edge node {$1$} (q2)
+    (q1) edge node {$0$} (q3)
+    (q2) edge node {$1$} (q4)
+    (q3) edge node {$0$} (T)
+    (q4) edge node {$1$} (T)
+    (T) edge [loop right] node {$0,1$} ();
+    
+\end{tikzpicture}
+\caption{AFN para el lenguaje $L$.}\label{fig:afn-dvsnd}
+\end{figure}
+
+\vspace{10pt}
+Podemos ver que ambos son muy similares, siendo la única diferencia que para el AFN (figura \ref{fig:afn-dvsnd}), 
+algunos estados no tienen transiciones para algunos símbolos, resultando en un menor número total de transiciones y 
+una representación más sencilla \cite{chakraborty_2003}.
+
+\vspace{10pt}
+Al igual que para los deterministas, se definen los conceptos de lenguaje aceptado y equivalencia para los AFNs de
+la misma manera. Veremos ahora que esta equivalencia puede ser definida para los autómatas finitos en general:
+
+\begin{teorema}Sea $M=(Q,\Sigma,q_0,\Delta,A)$ un AFN. Entonces existe un autómata finito determinista 
+$M'=(Q',\Sigma',q_0',\delta,A')$ que es equivalente a $M$, es decir, $L(M)=L(M')$.\label{teo:afn-afd}
+\end{teorema}
+\begin{proof}
+Definamos $M'=(Q',\Sigma',q_0',\delta,A')$ como sigue:
+\begin{enumerate}[(i)]
+    \item $Q'=P(Q)$ (la colección de todos los subconjuntos de $Q$).
+    \item $\Sigma'=\Sigma$.
+    \item $q_0'=\{q_0\}$.
+    \item $A'$ la colección de todos los subconjuntos de $Q'$ que contienen estados de $F$.
+\end{enumerate}
+Ahora, para cada conjunto $\{q_{i_1},q_{i_2},\dots,q_{i_n}\}$ de $Q'$ y cada símbolo de entrada $\sigma$ de $\Sigma$,
+definimos $\delta$ como:
+\begin{equation}
+    \delta(\{q_{i_1},\dots,q_{i_n}\},\sigma)=\{p_1,\dots,p_k\} \iff
+    \Delta(\{q_{i_1},\dots,q_{i_n}\},\sigma)=\{p_1,\dots,p_k\}
+\end{equation}
+Observamos que $\delta$ definida de esta manera es una función de $Q'\times\Sigma'$ en $Q'$, puesto que está bien
+definida para todos los elementos de $Q'\times\Sigma'$.
+
+Para probar que $L(M)=L(M')$, tenemos que ver que para toda cadena $w$, $\delta(q_0', w)=\{p_1,p_2,\dots,p_j\}$ si y
+sólo si $\Delta(q_0, w)=\{p_1,p_2,\dots,p_j\}$, es decir, $M$ acepta $w$ si y sólo si $M'$ acepta $w$. Vamos a probar
+esto mediante inducción sobre la longitud de $w$. Si $|w|=0$, esto es, $w=\lambda$, entonces
+\begin{equation}
+    \Delta(q_0,w)=\Delta(q_0,\lambda)=\{q_0\}=\delta(q_0',\lambda)=\delta(q_0,w)
+\end{equation}
+Ahora supongamos que para toda cadena $w$ de longitud $m$ se tiene que $\Delta(q_0,w)=\delta(q_0',w)$. Sea $u$ una
+cadena de longitud $m+1$. Entonces existirá algún $\sigma\in\Sigma$ de forma que $u=w\sigma$, donde $w$ es una cadena
+de longitud $m$. En este caso, $\delta(q_0',w\sigma)=\delta(\delta(q_0',w),\sigma)$. Por hipótesis de inducción, dado
+que $|w|=m$, tenemos que $\delta(q_0',w)=\{p_1,p_2,\dots,p_j\}$ si y sólo si 
+$\Delta(q_0',w))=\{p_1,p_2,\dots,p_j\}$. Por como hemos definido $\delta$, obtenemos la siguiente equivalencia:
+\begin{equation}
+    \delta(\{p_1,p_2,\dots,p_j\},\sigma)=\{r_1,r_2,\dots,r_k\} \iff
+    \Delta(\{p_1,p_2,\dots,p_j\},\sigma)=\{r_1,r_2,\dots,r_k\}
+\end{equation}
+Llegamos pues a que $\delta(q_0',w\sigma)=\{r_1,r_2,\dots,r_k\}$ si y sólo si 
+$\Delta(q_0',w\sigma)=\{r_1,r_2,\dots,r_k\}$, esto es, la igualdad se cumple para cadenas de longitud $m+1$ si se
+cumple para cadenas de longitud $m$. Entonces por lo anterior tenemos que $\delta(q_0',w)$ es un estado de $A'$ si
+y sólo si $\Delta(q_0,w)$ contiene algún estado de $A$, concluyendo entonces que $M'$ acepta $w$ si y sólo si $M$
+acepta $w$ \cite{kelley_2001}.
+\end{proof}
+
+% -------------------------------------------------------------------------------------------------------------------
+\subsection{Autómatas finitos no deterministas con $\lambda$-transiciones}
+
+Podemos ampliar la definición de los AFNs para incluir transiciones entre estados que no dependen de ningún símbolo
+de entrada, es decir, transiciones que toman como variable de entrada la palabra vacía. A este tipo de transiciones
+las llamaremos \textit{$\lambda$-transiciones}, y definimos un nuevo tipo de autómatas que las incorporan. Este tipo
+de autómatas nos serán muy útiles para la demostración de resultados que relacionan a los autómatas con las gramáticas.
+
+\begin{definicion}[Autómata finito no determinista con $\lambda$-transiciones] Un 
+\textit{autómata finito no determinista con $\lambda$-transiciones (AFN-$\lambda$)} es un AFN tal que su relación de 
+transición $\Delta$ ocurre sobre $(Q\times(\Sigma\cup\{\lambda\}))\times Q$.
+\end{definicion}
+
+A continuación, definimos una operación que nos permite conocer los estados de un AFN-$\lambda$ a los que se puede
+llegar mediante \textit{$\lambda$-transiciones}.
+
+\begin{definicion}[$\lambda$-clausura] Sea $M=(Q,\Sigma,q_0,\Delta,A)$ un AFN-$\lambda$. Para un subconjunto $S$ de $Q$
+se define la \textit{$\lambda$-clausura} de $S$, $\lambda(S)\subseteq Q$ como el subconjunto de $Q$ tal que:
+\begin{enumerate}[(i)]
+    \item $s\in\lambda(S)$ para todo $s\in S$.
+    \item Para cualquier $s\in\lambda(S)$, todo elemento de $\Delta(s,\lambda)$ es un elemento de $\lambda(S)$.
+    \item Todo elemento $s\in\lambda(S)$ puede ser únicamente obtenido mediante (\textsc{i}) o (\textsc{ii}).
+\end{enumerate}
+En conclusión, la \textit{$\lambda$-clausura} de $S$ es el conjunto de estados a los que se puede llegar desde los
+elementos de $S$ mediante $\lambda$-transiciones \cite{chakraborty_2003}.
+\end{definicion}
+
+La equivalencia entre autómatas puede también extenderse a este nuevo tipo de autómatas. No probaremos el siguiente
+teorema, pero conviene mencionar que tanto en su demostración como en la práctica, se utiliza la $\lambda$-clausura
+para crear autómatas sin $\lambda$-transiciones a partir de los AFN-$\lambda$s.
+
+\begin{teorema}Sean $L_M\subseteq\Sigma^*$ y $M=(Q,\Sigma,q_0,\Delta,A)$ un AFN-$\lambda$ tal que $L(M)=L_M$. Entonces
+existe un autómata finito determinista $M'=(Q',\Sigma',q_0',\delta,A')$ tal que $L(M')=L_M$, es decir, $M$ y $M'$ son
+equivalentes \cite{chakraborty_2003}.
+\end{teorema}
+
+Vamos a ilustrar el teorema anterior mediante un ejemplo. Tomando el AFN-$\lambda$ $M=(Q,\Sigma,q_0,\Delta,A)$ de la 
+figura \ref{fig:adnlambda}, vamos a construir un AFN y un AFD equivalentes.
+
+\begin{figure}[htbp!]
+\centering
+\begin{tikzpicture} [node distance = 2cm, on grid, auto]
+\node (q0) [state, initial, initial text = $M$, scale = 0.6 ] {$q_0$};
+\node (q1) [state, above right = of q0, scale = 0.6 ] {$q_1$};
+\node (q2) [state, below right = of q0, scale = 0.6 ] {$q_2$};
+\node (q3) [state, accepting, scale = 0.6 ] at (3,0){$q_3$};
+
+\path [-stealth, thick]
+    (q0) edge node {$\lambda$} (q1)
+    (q0) edge node {$\lambda$} (q2)
+    (q1) edge node {$1$} (q3)
+    (q2) edge node {$0$} (q3)
+    (q1) edge [loop below] node {$0$} ()
+    (q2) edge [loop above] node {$1$} ();
+\end{tikzpicture}
+\caption{Autómata finito no determinista con $\lambda$-transiciones.}\label{fig:adnlambda}
+\end{figure}
+
+Vamos a llamar $M_1=(Q_1,\Sigma,q_0',\Delta_1,A_1)$ al AFN. Para calcular, por ejemplo, $\Delta_1(q_0,0)$, usamos la 
+$\lambda$-clausura de la siguiente manera:
+\begin{equation}
+    \Delta_1(q_0,0)=\lambda(\bigcup_{p\in\lambda(\{q_0\})}\Delta(p,0))
+\end{equation}
+Esto es, calcular en primer lugar la $\lambda$-clausura de $q_0$, seguido de calcular las transiciones para cada uno
+de esos elementos, y después la $\lambda$-clausura de cada uno de ellos. En este caso, tenemos en primer lugar que
+$\lambda(q_0)=\{q_1,q_2\}$, después que $\Delta(\{q_1,q_2\},0)=\{q_1,q_3\}$ y que $\lambda(\{q_1,q_3\})=\{q_1,q_3\}$.
+Por tanto, $\Delta_1(q_0,0)=\{q_1,q_3\}$. Siguiendo ese razonamiento, podemos construir el AFN de la figura
+\ref{fig:adn-adnl}.
+
+\begin{figure}[h!]
+    \centering
+    \begin{tikzpicture} [node distance = 2cm, on grid, auto]
+    \node (q0) [state, initial, initial text = $M_1$, scale = 0.6 ] {$q_0$};
+    \node (q1) [state, above right = of q0, scale = 0.6 ] {$q_1$};
+    \node (q2) [state, below right = of q0, scale = 0.6 ] {$q_2$};
+    \node (q3) [state, accepting, scale = 0.6 ] at (3,0){$q_3$};
+    
+    \path [-stealth, thick]
+        (q0) edge node {$0$} (q1)
+        (q0) edge node {$1$} (q2)
+        (q0) edge node {$0,1$} (q3)
+        (q1) edge node {$1$} (q3)
+        (q2) edge node {$0$} (q3)
+        (q1) edge [loop above] node {$0$} ()
+        (q2) edge [loop below] node {$1$} ();
+    \end{tikzpicture}
+    \caption{Autómata finito no determinista a partir de $M$.}\label{fig:adn-adnl}
+\end{figure}
+
+\vspace{10pt}
+Una vez construido el autómata no determinista, podemos aplicar el teorema \ref{teo:afn-afd} para construir un AFD
+equivalente \cite{chakraborty_2003}.
+
+% -------------------------------------------------------------------------------------------------------------------
+\section{Teorema de Kleene}
+
+En esta sección vamos a enunciar y demostrar uno de los teoremas más significativos para relacionar a los autómatas con
+los lenguajes. El teorema en cuestión es el siguiente:
+
+\begin{teorema}[Kleene]\label{teo:kleene}Un lenguaje es regular si y sólo si es aceptado por un autómata finito.
+\end{teorema}
+
+Para probar este teorema, primero vamos a introducir tres conceptos sobre autómatas: la concatenación, clausura de
+Kleene y la unión de autómatas.
+
+\begin{definicion}[Concatenación de autómatas]\label{def:concat-auto}Sean $M_1=(Q_1,\Sigma_1,q_1,\delta_1,A_1)$ y 
+$M_2=(Q_2,\Sigma_2,q_2,\delta_2,A_2)$ dos autómatas finitos. Definimos la \textit{concatenación} de $M_1$ y $M_2$,
+escrita $M_1M_2$, como la quíntupla $(Q,\Sigma,q_0,\delta,A)$ tal que:
+\begin{enumerate}[(i)]
+    \item $Q=Q_1\sqcup Q_2$, donde $\sqcup$ denota la unión disjunta.
+    \item $\Sigma=(\Sigma_1\cup\Sigma_2)\cup\{\lambda\}$.
+    \item $q_0=q_1$.
+    \item $A=A_2$.
+    \item $\delta:Q\times\Sigma\to P(Q)$ dada por:
+    \begin{itemize}
+        \item $\delta(q,\lambda)=q_2$ si $q\in A_1$ y $\delta(q,\lambda)=\{q\}$ en cualquier otro caso.
+        \item $\delta|_{(Q_1\times\Sigma_1)}=\delta_1$, $\delta|_{(Q_2\times\Sigma_2)}=\delta_2$ y 
+        $\delta(q,\sigma)=\emptyset$ en cualquier otro caso, si $\sigma\neq\lambda$.
+    \end{itemize}
+\end{enumerate}
+El autómata $M_1M_2$ es un autómata finito no determinista con $\lambda$-transiciones \cite{juxt_auto}.
+\end{definicion}
+
+El funcionamiento de esta operación es fácil de ver. Supongamos dos autómatas $A$ y $B$. Sea una palabra $w=ab$, con
+$a\in\Sigma_A^*$ y $b\in\Sigma_B^*$, el autómata $AB$ la leería de la siguiente manera: En primer lugar, lee $a$ como
+si fuese el autómata $A$ mediante $\delta_A$. Cuando $a$ es aceptada por $A$, es decir, se pasa a un estado de
+aceptación de $A$, mediante una $\lambda$-transición se pasa al estado inicial de $B$, y se prosigue leyendo $b$ como
+si se tratase del autómata $B$. La palabra $w$ se considera finalmente aceptada cuando se llega a uno de los estados
+de aceptación de $B$, puesto que también lo son de $AB$.
+
+\vspace{10pt}
+Gracias a este ejemplo, podemos hacernos una idea de que si concatenamos dos autómatas, las palabras que van a aceptar
+van a ser concatenaciones de palabras del lenguaje del primero y palabras del lenguaje del segundo. Formalmente:
+
+\begin{proposicion} Sean $M_1=(Q_1,\Sigma_1,q_1,\delta_1,A_1)$ y $M_2=(Q_1,\Sigma_2,q_2,\delta_2,A_2)$ autómatas
+finitos. Entonces, $L(M_1M_2)=L(M_1)L(M_2)$.\label{prop:concat-auto}
+\end{proposicion}
+\begin{proof}
+Sea $M_1M_2=(Q,\Sigma,q_0,\delta,A)$. Supongamos que $w=ab$ es una palabra tal que $a\in\Sigma_1^*$ y $b\in\Sigma_2^*$.
+Si $w\in L(M_1M_2)$, entonces $\delta(q_0,a\lambda b)\cap A\neq\emptyset$. Puesto que 
+$\delta(q_0,a\lambda b)\cap A_2=\delta(q_0,a\lambda b)\cap A\neq\emptyset$ y $b\in\Sigma_2^*$, tenemos por la 
+definición de $\delta$ que $\delta(q_0,a\lambda b)=\delta(\delta(q_0,a\lambda),b)=\delta_2(\delta(q_0,a\lambda),b)$,
+por lo que $b\in L(M_2)$ y $\delta(q_0,a\lambda)\cap q_2\neq\emptyset$ ($\delta(q_0,a\lambda)=q_2$ si $q_2$ es un
+único estado). Por otro lado $\delta(q_0,a\lambda)=\delta(\delta(q_0,a),\lambda)$, que por la definición de $\delta$,
+$\delta(q_0,a)\cap A_1\neq\emptyset$, lo que implica que $\delta(q_0,a)=\delta_1(q_0,a)$, y $a\in L(M_1)$, por la
+definición de $\delta$ para la concatenación de autómatas (definición \ref{def:concat-auto}).
+
+Veamos ahora la otra implicación. Sean $a\in L(M_1)$ y $b\in L(M_2)$, entonces $\delta(q_0,a)=\delta_1(q_0,a)$, que 
+tiene intersección no vacía con $A_1$. Esto quiere decir que, por la definición de $\delta$, 
+$\delta(q_0,a\lambda)=\delta(\delta(q_0,a),\lambda)=q_2$. Finalmente, tenemos que 
+$\delta(q_0,a\lambda b)=\delta(\delta(q_0,a\lambda),b)=\delta(q_2,b)$, que por ser $b\in L(M_2)$ tiene intersección
+no vacía con $A_2=A$. Por tanto, $a\lambda b\in L(M_1M_2\cup\{\lambda\})$ o equivalentemente $ab\in L(M_1M_2)$
+\cite{juxt_auto}.
+\end{proof}
+
+\begin{definicion}[Clausura de Kleene de autómatas] Sea $M=(Q,\Sigma,q_0,\delta,A)$ un autómata finito. Se define la
+\textit{clausura de Kleene} de $M$, $M^*$, como el AFN-$\lambda$ $(Q_k,\Sigma,q_k,\delta_k,A_k)$, donde:
+\begin{enumerate}[(i)]
+    \item $Q_k=Q\cup\{q\}$, donde $q$ es un símbolo no perteneciente a $\Sigma$.
+    \item $q_k=A_k=\{q\}$.
+    \item $\delta_k$ es una función de $Q_k\times(\Sigma\cup\{\lambda\})$ a $P(Q_k)$ dada por:
+    \begin{itemize}
+        \item $\delta_k(s,\lambda)=q_0$ si $s=q$, $\delta_k(s,\lambda)=\{q\}$ para cualquier $s\in A$,
+        \item $\delta_k(s,\sigma)=\delta(s,\sigma)$ para todo $(s,\sigma)\in Q\times\Sigma$ y
+        \item $\delta_k(s,\sigma)=\emptyset$ en cualquier otro caso.
+    \end{itemize}
+\end{enumerate}
+En resumen, se trata del autómata cuyas reglas de producción son todas las de $M$, además de todas las transiciones
+que llevan cualquier estado de aceptación $s$ a cualquier estado inicial de $M$, así como cualquier estado de 
+aceptación de $M$ a ese estado $s$ \cite{kls_auto}.
+\end{definicion}
+
+Un resultado muy interesante de esta operación es la equivalencia entre el lenguaje aceptado por la clausura de un
+autómata y la clausura del lenguaje aceptado por un autómata. Formalmente:
+
+\begin{proposicion}Sea $M=(Q,\Sigma,q_0,\delta,A)$ un autómata finito. Entonces $L(M)^*=L(M^*)$ \cite{kls_auto}.
+\label{prop:clau-auto}
+\end{proposicion}
+
+\begin{definicion}[Unión de autómatas] Dados dos autómatas finitos $M_1$ y $M_2$, con 
+$M_1=(Q_1,\Sigma,q_1,\delta_1,A_1)$ y $M_2=(Q_1,\Sigma,q_2,\delta_2,A_2)$. Se define la \textit{unión} de $M_1$ y 
+$M_2$, $M_1\cup M_2$ como la quíntupla $(Q,\Sigma,q_0,\delta,A)$ tal que:
+\begin{enumerate}[(i)]
+    \item $Q=Q_1\cup Q_2$.
+    \item $q_0=(q_1,q_2)$ ($q_0=q_1\times q_2$ cuando hay más de un estado inicial).
+    \item $A=A_1\cup A_2$.
+    \item $\delta$ es una función de $Q\times\Sigma$ a $P(Q)$ tal que 
+    $\delta((q,q'),\sigma)=(\delta_1(q,\sigma),\delta_2(q',\sigma))$.
+\end{enumerate}
+Esta quíntupla es también un autómata finito \cite{union_auto}.
+\end{definicion}
+
+Análogamente a la clausura, podemos ver que existe una equivalencia entre la unión de lenguajes aceptados y el lenguaje
+aceptado por la unión.
+
+\begin{proposicion}Sean $M_1$ y $M_2$ dos autómatas finitos. Entonces $L(M_1)\cup L(M_2)=L(M_1\cup M_2)$ 
+\cite{union_auto}. \label{prop:union-auto}
+\end{proposicion}
+
+Con estas tres operaciones definidas, podemos ya comenzar con la demostración del Teorema de Kleene. Probamos cada una
+de las implicaciones por separado.
+
+\begin{lema}Todo lenguaje regular puede ser aceptado por un autómata finito.
+\end{lema}
+\begin{proof}
+Sea $\Sigma$ un alfabeto, vamos a probar que la familia de lenguajes regulares sobre $\Sigma$ puede ser aceptada por
+autómatas finitos mediante inducción. Comenzamos, en primer lugar, por los lenguajes atómicos. Es fácil ver
+que los lenguajes regulares $\emptyset$, $\{\lambda\}$ y $\{a\}$ ($a\in\Sigma$) son aceptados por autómatas finitos,
+cuyos diagramas son los de la figura \ref{fig:afd-atomic}.
+
+\begin{figure}[ht!]
+     \centering
+     \begin{subfigure}[b]{0.3\textwidth}
+         \centering
+         \begin{tikzpicture} [node distance = 2cm, on grid, auto]
+            \node (Q1) [state, initial, initial text = $\emptyset$, scale = 0.6 ] {$Q_0$};
+         \end{tikzpicture}
+     \end{subfigure}
+     \begin{subfigure}[b]{0.3\textwidth}
+         \centering
+         \begin{tikzpicture} [node distance = 2cm, on grid, auto]
+            \node (Q1) [state, initial, accepting, initial text = $\{\lambda\}$, scale = 0.6 ] {$Q_0$};
+         \end{tikzpicture}
+     \end{subfigure}
+     \begin{subfigure}[b]{0.3\textwidth}
+         \centering
+         \begin{tikzpicture} [node distance = 1.5cm, on grid, auto]
+            \node (Q0) [state, initial, initial text = $\{a\}$, scale = 0.6 ] {$Q_0$};
+            \node (Q1) [state, accepting, right = of Q0, scale = 0.6] {$Q_1$};
+            \path [-stealth, thick]
+                (Q0) edge node {$a$} (Q1);
+         \end{tikzpicture}
+     \end{subfigure}
+        \caption{Autómatas que reconocen $\emptyset$, $\{\lambda\}$ y $\{a\}$.}
+        \label{fig:afd-atomic}
+\end{figure}
+
+Ahora, supongamos que $L_1$ y $L_2$ son lenguajes regulares sobre $\Sigma$ aceptados por los autómatas $M_1$ y $M_2$ respectivamente.
+Entonces:
+\begin{itemize}
+    \item $L_1L_2$ es aceptado por el autómata $M_1M_2$, la concatenación de los autómatas $M_1$ y $M_2$, por 
+    la proposición \ref{prop:concat-auto}.
+    \item $L_1^*$ es aceptado por el autómata $M_1^*$, la clausura del autómata $M_1$, por la proposición
+    \ref{prop:clau-auto}.
+    \item $L_1\cup L_2$ es aceptado por el autómata $M_1\cup M_2$, la unión de los autómatas $M_1$ y $M_2$, por 
+    la proposición \ref{prop:union-auto}.
+\end{itemize}
+Por la definición \ref{def:familia-regulares}, no puede construirse ningún otro lenguaje regular sobre $\Sigma$, por
+lo que tenemos que todo lenguaje regular de la familia de lenguajes regulares sobre $\Sigma$ puede ser aceptada por un
+autómata finito. Puesto que $\Sigma$ es arbitrario, tenemos la prueba \cite{kleene_teo}.
+\end{proof}
+
+Veamos ahora la implicación inversa.
+
+\begin{lema}Todo lenguaje aceptado por un autómata finito es regular.
+\end{lema}
+\begin{proof}
+Sea $M=(Q,\Sigma,q_0,\delta,A)$ un autómata finito, indexamos sus posibles estados mediante números naturales: 
+$q_1,q_2,\dots,q_m$. Supongamos $1\leq i,j,k\leq m$. Definimos el lenguaje $L(i,j,k)$ como sigue: Una palabra es un 
+elemento del lenguaje si y sólo si es la secuencia de símbolos que forman un camino desde $q_i$ hasta $q_j$ tal que sus 
+estados intermedios tienen un índice de como mucho $k$. Fijando $i$ y $j$, aplicamos inducción sobre $k$:
+\begin{itemize}
+    \item $L(i,j,0)$ es regular para cualquier $i$, $j$, puesto que cualquier palabra de $L(i,j,0)$, si no es el
+    lenguaje vacío, es $\lambda$ o un símbolo de $\Sigma$. En cualquier caso, es un lenguaje regular.
+    \item Sea $L(i,j,k)$ regular, veamos que $L(i,j,k+1)$ también lo es. Sea $p$ una palabra tal que es una secuencia
+    de símbolos desde $q_i$ a $q_j$ cuyos estados intermedios tienen un índice menor o igual a $k+1$, esto es,
+    $p=q_iq_{k_1}q_{k_2}\dots q_j$, $k_i\leq k+1$. Entonces, o ninguno de los índices de los estados es mayor a $k$, o
+    $q_{k+1}$ es un estado intermedio. Para el primer caso, $p\in L(i,j,k)$. Para el segundo, la secuencia de símbolos
+    de $p$ comienza en $q_i$, llega a $q_{k+1}$ por primera vez, pasa a otro símbolo, vuelve o no a $q_{k+1}$, pasa a
+    otro símbolo, \dots; y finalmente termina en $q_j$. Esta secuencia puede ser descrita mediante la siguiente
+    identidad:
+    \begin{equation}
+        L(i,j,k+1)=L(i,j,k)\cup L(i,k+1,k)L(k+1,k+1,k)^*L(k+1,j,k)
+    \end{equation}
+    Puesto que cada uno de los lenguajes de la componente derecha es regular (al ser $k$ su tercera componente), el
+    lenguaje $L(i,j,k+1)$ es regular, por ser el resultado de aplicar operaciones cerradas para lenguajes regulares
+    sobre lenguajes regulares.
+\end{itemize}
+Tenemos entonces que, en particular, $L(i,j,m)$ es regular. Puesto que:
+\begin{equation}
+    L(A)=\bigcup\{L(i,j,m)\mid q_i\in q_0,q_j\in A\}
+\end{equation}
+que es una unión finita de lenguajes regulares, y la unión es cerrada para los lenguajes regulares, $L(A)$ es regular
+\cite{kleene_teo}.
+\end{proof}
+
+Con estos dos lemas probados, podemos ver que el Teorema de Kleene no es más que la consecuencia de ambos.
+
+% -------------------------------------------------------------------------------------------------------------------
+\section{Gramáticas regulares}
+
+Veamos ahora las gramáticas capaces de representar los lenguajes regulares, que, por el Teorema de Kleene, son a su vez 
+los aceptados por los autómatas finitos. Estas gramáticas pueden ser de dos tipos, pero ambas forman parte de las \textbf{\textit{gramáticas regulares}}.
+
+\begin{definicion}[Gramática lineal por la derecha estricta]\label{def:gramatica-lde} Una 
+\textit{gramática lineal por la derecha estricta} es una gramática $G=(N,T,S,P)$ en la que las reglas de producción 
+siguen una de las siguientes formas:
+\begin{align*}
+    A &\to xB,\;x\in T \\
+    A &\to \lambda
+\end{align*}
+donde $A,B\in N$ \cite{pfenning_2000}.
+\end{definicion}
+
+Cualquier derivación de una palabra $w=x_1\dots x_n$ desde el símbolo inicial de este tipo de gramáticas es de la 
+forma:
+\begin{equation}
+    S\Rightarrow x_1A_1 \Rightarrow x_1x_2A_2\Rightarrow\dotsc\Rightarrow x_1\dots x_nA_n\Rightarrow x_1\dots x_n
+\end{equation}
+Es importante notar que es posible que algunos $x_i$ sean la palabra vacía $\lambda$.
+
+\begin{definicion}[Gramática lineal por la derecha]\label{def:gramatica-ld} Una 
+\textit{gramática lineal por la derecha} es una gramática $G=(N,T,S,P)$ en la que cada regla de producción es de una de 
+las siguientes formas:
+\begin{align*}
+    A &\to wB \\
+    A &\to w
+\end{align*}
+donde $w\in T^*$ \cite{pfenning_2000}.
+\end{definicion}
+
+Podemos ver claramente que toda gramática lineal por la derecha estricta es una gramática lineal por la derecha. Además, podemos ver que existe una equivalencia entre los lenguajes que generan.
+
+\begin{lema}\label{lem:gld-glde}Para cada gramática lineal por la derecha $G$ existe una gramática lineal por la 
+derecha estricta $H$ tal que $L(G)=L(H)$ \cite{pfenning_2000}.
+\end{lema}
+\begin{proof}
+Sea $G=(N,T,S,P)$ una gramática lineal por la derecha. Construimos una gramática lineal por la derecha estricta
+mediante la transformación de cada regla de producción
+\begin{equation}
+    A\to a_1\dots a_nB
+\end{equation}
+donde $n\geq 2$ al conjunto de reglas
+\begin{align}
+    A\quad&\to\quad a_1A_1 \\
+    A_1\quad&\to\quad a_2A_2 \\
+    &\dotsc \\
+    A_n\quad&\to\quad B
+\end{align}
+donde $A_1,\dots,A_n$ son nuevos símbolos no terminales. De manera similar, cada regla de producción
+\begin{equation}
+    A\to a_1\dots a_n
+\end{equation}
+donde $n\geq 1$ se transforma en
+\begin{align}
+    A\quad&\to\quad a_1A_1 \\
+    A_1\quad&\to\quad a_2A_2 \\
+    &\dotsc \\
+    A_n\quad&\to\quad\lambda
+\end{align}
+donde $A_1,\dots,A_n$ son nuevos símbolos no terminales.
+Construimos ahora $H=(N',T,S,P')$, donde $N'$ contiene $N$ y todos los nuevos símbolos añadidos en las 
+transformaciones y $P'$ contiene las reglas de las transformaciones y todas las reglas de $P$ que satisfacen las
+condiciones de las gramáticas lineales estrictas por la derecha.
+
+Es fácil probar ahora que $L(G)=L(H)$. No realizaremos la prueba, pero es fácil llegar a la igualdad mediante inducción
+en ambas direcciones, es decir, probando $L(G)\subseteq L(H)$ y $L(G)\subseteq L(H)$ mediante inducción 
+\cite{pfenning_2000}.
+\end{proof}
+
+\begin{definicion}[Gramática lineal por la izquierda]\label{def:gramatica-li}Una gramática $G=(N,T,S,P)$ es una 
+\textit{gramática lineal por la izquierda} si sus reglas de producción siguen una de las siguientes formas:
+\begin{align*}
+    A &\to Bw \\
+    A &\to w
+\end{align*}
+donde $w\in T^*$ \cite{pfenning_2000}.
+\end{definicion}
+
+\begin{definicion}[Gramática regular]\label{def:gramatica-r}Una gramática es \textit{regular} si es una gramática 
+lineal por la derecha o por la izquierda \cite{pfenning_2000}.
+\end{definicion}
+
+% -------------------------------------------------------------------------------------------------------------------
+\section{Lenguajes regulares y gramáticas regulares}
+
+Gracias al teorema de Kleene, hemos visto que existe una equivalencia entre lenguajes regulares y autómatas finitos.
+De una manera análoga, vamos a ver que existe una equivalencia entre los lenguajes regulares y las gramáticas regulares,
+obteniendo una especie de ``ciclo'' de equivalencias entre autómatas finitos, lenguajes regulares y gramáticas 
+regulares. Comenzamos primero con unos teoremas sobre gramáticas lineales:
+
+\begin{teorema}\label{teo:glde-lr}Un lenguaje $L$ es regular si y sólo si existe una gramática lineal por la derecha 
+estricta $G$ tal que $L(G)=L$ \cite{pfenning_2000}.
+\end{teorema}
+\begin{proof}
+De forma similar al teorema de Kleene, probaremos las implicaciones por separado. Estas implicaciones son los lemas
+\ref{lem:gl-r} y \ref{lem:r-gl}.
+\end{proof}
+
+\begin{lema}\label{lem:gl-r}Si $G$ es una gramática lineal por la derecha estricta, entonces $L(G)$ es regular.
+\end{lema}
+\begin{proof}
+Sea $G=(N,T,S,P)$ una gramática lineal por la derecha estricta. Construimos un AFN-$\lambda$ 
+$M=(Q,\Sigma,q_0,\delta,A)$ tal que $L(M)=L(G)$. Para ello, tomamos:
+\begin{itemize}
+    \item $Q=N$, es decir, el conjunto de estados será el conjunto de símbolos no terminales.
+    \item $\Sigma=T$
+    \item $q_0=S$.
+    \item $\delta(B,\sigma)=\{C\mid B\to\sigma C\in P\}$.
+    \item $A=\{C\mid C\to\lambda\in P\}$.
+\end{itemize}
+Queda probar que $L(M)=L(G)$. Vamos a notar como $B\overset{w}{\Rightarrow}_MC$ a las producciones del autómata.
+\begin{enumerate}
+    \item $L(G)\subseteq L(M)$. Probaremos mediante inducción sobre la estructura de la derivación:
+    \begin{quote}
+        Si $B\overset{*}{\Rightarrow}w$ entonces
+        \begin{itemize}
+            \item $w=uB$ y $B\overset{u}{\Rightarrow}_MC$ para algún $u\in\Sigma^*$, o
+            \item $w=u$ y $B\overset{u}{\Rightarrow}_MD$ para algún $u\in\Sigma^*$ y estado de aceptación $D$.
+        \end{itemize}
+    \end{quote}
+    En primer lugar, si $B\overset{*}{\Rightarrow}B$, entonces $B\overset{\lambda}{\Rightarrow}_MB$ por ser $M$ un 
+    AFN-$\lambda$. En segundo lugar, si $B\overset{*}{\Rightarrow}\lambda$, entonces $B\in A$ y 
+    $B\overset{\lambda}{\Rightarrow}_MB$. Sea ahora $B\Rightarrow xB_1\overset{*}{\Rightarrow}xw_1$ para $x\in\Sigma$ y $w=xw_1$. Por la hipótesis de inducción sobre $B_1\overset{*}{\Rightarrow}w_1$, tenemos dos posibles casos:
+    \begin{itemize}
+        \item $w_1=vC$, por lo que $B_1\overset{*}{\Rightarrow}vC$ y $B_1\overset{u}{\Rightarrow}_MC$. Tomando $u=xv$
+        tenemos $B\Rightarrow xvC=xw_1$ y $B\overset{x}{\Rightarrow}_MB_1\overset{v}{\Rightarrow}_MC$.
+        \item $w_1=v$, por lo que $B_1\overset{*}{\Rightarrow}v$ y $B_1\overset{u}{\Rightarrow}_MD$ para un estado de
+        aceptación $D$. Tomando $u=xv$ tenemos que $B\Rightarrow xv=xw_1$ y 
+        $B\overset{x}{\Rightarrow}_MB_1\overset{v}{\Rightarrow}_MD$.
+    \end{itemize}
+    \item $L(M)\subseteq L(G)$. Probaremos mediante inducción sobre la producción del autómata:
+    \begin{quote}
+        Si $B\overset{w}{\Rightarrow}_MC$ entonces $B\overset{*}{\Rightarrow}wC$.
+    \end{quote}
+    Tomaremos $S$ como $B$ y $C$ como un estado de aceptación del autómata.
+
+    Sea $B\overset{\lambda}{\Rightarrow}_MB$, entonces $B\overset{*}{\Rightarrow}B$ por la definición de derivación
+    (no se aplica ninguna regla de producción). Sea ahora $B\overset{x}{\Rightarrow}_MB_1\overset{u}{\Rightarrow}_MC$,
+    donde $w=xu$ y $x\in\Sigma$. Por la hipótesis de inducción, $B_1\overset{*}{\Rightarrow}uC$, por lo que 
+    $B\Rightarrow xB_1\overset{*}{\Rightarrow}xuC$.
+\end{enumerate}
+Tenemos entonces que $L(G)\subseteq L(M)\subseteq L(G)$, por lo que $L(M)=L(G)$ \cite{pfenning_2000}.
+\end{proof}
+
+\begin{lema}\label{lem:r-gl}Si $L$ es un lenguaje regular, entonces existe una gramática lineal por la derecha 
+estricta tal que $L(G)=L$ \cite{pfenning_2000}.
+\end{lema}
+
+Para demostrar este lema, se construye un AFN-$\lambda$ $M=(Q,\Sigma,q_0,\delta,A)$ que reconozca $L$. Después se
+construye una gramática lineal por la derecha estricta $G=(N,T,S,P)$ tal que $N=Q$, $T=\Sigma$, $S=q_0$ y $P$ es:
+\begin{equation}
+    P=\{q\to xr\mid r\in\delta(q,x)\}\cup\{q\to\lambda\mid q\in A\}
+\end{equation}
+Después, se prueba $L(M)=L(G)$ mediante inducción en ambas direcciones\cite{pfenning_2000}.
+
+Ahora bien, puesto que tenemos que existe una equivalencia entre los lenguajes generados por las gramáticas lineales
+por la derecha y las gramáticas lineales estrictas por la derecha, llegamos a este resultado:
+
+\begin{teorema}\label{teo:gld-lr}Un lenguaje $L$ es regular si y sólo si existe una gramática lineal por la derecha 
+$G$ tal que $L(G)=L$ \cite{pfenning_2000}.
+\end{teorema}
+\begin{proof}
+Este teorema es consecuencia del teorema \ref{teo:glde-lr} y el lema \ref{lem:gld-glde}. Puesto que tenemos que se
+da la doble implicación para las gramáticas lineales estrictas por la derecha, y para cualquiera de ellas podemos
+construir una lineal por la derecha cuyos lenguajes generados sean equivalentes, tenemos que se cumple para las 
+gramáticas lineales por la derecha.
+\end{proof}
+
+Mediante una prueba similar a la de las gramáticas lineales por la derecha estrictas, podemos llegar a un resultado
+similar para las gramáticas lineales por la izquierda \cite{pfenning_2000}.
+
+\begin{teorema}\label{teo:gli-lr}Un lenguaje $L$ es regular si y sólo si existe una gramática lineal por la izquierda 
+$G$ tal que $L(G)=L$.
+\end{teorema}
+
+Finalmente, llegamos al siguiente resultado:
+
+\begin{teorema}Un lenguaje $L$ es regular si y sólo si existe una gramática regular $G$ tal que $L(G)=L$.
+\end{teorema}
+\begin{proof}
+Puesto que una gramática regular por definición es lineal por la izquierda o por la derecha, tenemos que se cumple por
+los teoremas \ref{teo:gld-lr} y \ref{teo:gli-lr}.
+\end{proof}
+
+Tenemos entonces que una gramática regular siempre genera un lenguaje regular, y por el teorema de Kleene que cualquier
+lenguaje regular es aceptado por un autómata finito. Podemos decir entonces que existe una equivalencia entre estas
+tres estructuras, y podemos construir unas a partir de las otras. Es posible de esta manera construir autómatas finitos
+a partir de gramáticas, sabiendo que el lenguaje generado por la gramática será equivalente al aceptado por el 
+autómata. Mediante este tipo de construcciones se generan los analizadores léxicos, que suelen, a partir de una 
+gramática, construir los autómatas capaces de detectar las palabras del lenguaje generado por ella.
+
+\endinput
+%--------------------------------------------------------------------
+% FIN DEL CAPÍTULO. 
+%--------------------------------------------------------------------

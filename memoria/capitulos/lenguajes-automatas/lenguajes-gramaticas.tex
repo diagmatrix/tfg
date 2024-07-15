@@ -1,0 +1,221 @@
+% !TeX root = ../tfg.tex
+% !TeX encoding = utf8
+
+\chapter{Lenguajes y gramáticas}\label{chap:leng}
+
+Antes de poder definir el lenguaje de la herramienta, es necesario introducir la teoría de lenguajes formales. Esta 
+teoría tal y como se la conoce en la actualidad comenzó su desarrollo durante el siglo XX. Durante las décadas de 1930 
+y 1940, los trabajos de Turing y Post desarrollaron ciertos conceptos de la teoría de lenguajes, como las cadenas de 
+producción. Poco más tarde, Warren Weaver y A. D. Booth realizaron estudios sobre los lenguajes formales como 
+herramientas para la traducción automática mediante computadores. No es hasta 1959 con el trabajo de Noam Chomsky en 
+el que se describe la ``Jerarquía de Chomsky'' cuando la teoría de los lenguajes formales gana popularidad y se 
+desarrolla \cite{greibach_1981_formal}.
+
+\vspace{10pt}
+A los largo de los siguientes capítulos hablaremos de los lenguajes regulares, interesantes desde el punto de vista 
+práctico porque pueden ser usados para especificar la construcción de analizadores léxicos \cite{kelley_2001}. Estos 
+analizadores léxicos nos permitirán transformar un archivo con código escrito en nuestro lenguaje en una secuencia de 
+palabras o \textit{tokens} con los que construiremos las sentencias a ejecutar. Daremos a conocer también los autómatas
+finitos, que serán las máquinas capaces de validar e interpretar estos lenguajes.
+
+\vspace{10pt}
+Después, daremos a conocer también los lenguajes y gramáticas libres de contexto, a partir de los cuales podremos 
+definir los elementos del lenguaje de la herramienta, así como sus construcciones sintácticas. También definiremos a
+los autómatas con pila, máquinas que, análogamente a los autómatas finitos, serán los capaces de interpretar este tipo
+de lenguajes. Será con uno de estos autómatas con lo que construiremos el intérprete de nuestro lenguaje.
+
+\vspace{10pt}
+Vamos, en primer lugar, a definir algunos conceptos básicos de la teoría de lenguajes que utilizaremos a lo largo del 
+capítulo y en capítulos posteriores.
+
+\begin{definicion}[Alfabeto] Un alfabeto $\Sigma$ es un conjunto finito no vacío. Cada uno de los elementos de un 
+alfabeto se denomina símbolo.
+\end{definicion}
+\begin{definicion}[Palabra] Una \textit{palabra} o \textit{cadena} es un conjunto finito de símbolos de un alfabeto. 
+La palabra que contiene cero símbolos se denomina \textit{palabra vacía} y se denota por $\lambda$.
+\end{definicion}
+
+Sea $w$ una palabra, entonces $w^n$ es una palabra tal que \cite{Yu1997}:
+\begin{enumerate}[i]
+    \item $w^0=\lambda$.
+    \item $w^n=ww^{n-1}$, para $n>0$.
+\end{enumerate}
+Además, tomando la palabra $w$ como $w=a_1a_2\dotsc a_n$, podemos definir la \textit{imagen inversa} de $w$, 
+$w^{-1}$, de la siguiente manera: $w^{-1}=a_na_{n-1}\dotsc a_1$ \cite{Becerra2018}.
+
+\begin{definicion}[Clausura transitiva o de Kleene] La \textit{clausura transitiva} o \textit{clausura de Kleene}
+de un alfabeto $\Sigma$ ($\Sigma^*$) es el conjunto de todas las palabras de $\Sigma$. El conjunto de todas las palabras
+de $\Sigma$ excluyendo la palabra vacía se denota como $\Sigma^+$.
+\end{definicion}
+\begin{definicion}[Concatenación] Se define la \textit{concatenación} de dos palabras como la aplicación
+$\circ:\Sigma^*\times\Sigma^*\to\Sigma^*$ tal que $x\circ y=xy$, con $x, y\in\Sigma^*$.
+\end{definicion}
+
+Dado un alfabeto $\Sigma$, tomando la concatenación como operación binaria y $\lambda$ como elemento neutro,
+$(\Sigma^*, \circ)$ es un monoide \cite{Mateescu1997}.
+
+\begin{definicion}[Longitud] Se define la \textit{longitud} de una palabra $w$, denotada por $|w|$ como el número de
+símbolos que componen la palabra.
+\end{definicion}
+
+% -------------------------------------------------------------------------------------------------------------------
+\section{Lenguajes formales}
+
+Con esas definiciones básicas, podemos ya definir el concepto de \textbf{\textit{lenguaje formal}}. Existen muchos 
+tipos de lenguajes, diferenciados entre sí por su construcción y limitaciones.
+
+\begin{definicion}[Lenguaje formal] Un \textit{lenguaje formal} o \textit{lenguaje} $L$ sobre un alfabeto $\Sigma$ es
+un subconjunto de $\Sigma^*$. El \textit{lenguaje vacío} es el lenguaje formado por la palabra vacía, y el
+\textit{lenguaje universal} sobre $\Sigma$ es $\Sigma^*$.
+\end{definicion}
+
+Sobre un lenguaje, se pueden definir las operaciones usuales de conjuntos: complemento, unión e intersección. Además,
+el concepto de \textit{concatenación} puede extenderse a los lenguajes de la siguiente manera:
+\begin{equation}
+    L_1L_2=\{w_1w_2\mid\; w_1\in L_1, w_2\in L_2\}
+\end{equation}
+
+También se extiende la notación $L^n$, definida por \cite{Yu1997}:
+\begin{enumerate}[(i)]
+    \item $L^0=\{\lambda\}$.
+    \item $L^n=L^{n-1}L$, para $n>0$.
+\end{enumerate}
+
+Un lenguaje $L$ es \textit{no numerable} si y sólo si existe un entero $n$ tal que, para todas palabras $x, y, z\in L$,
+$xy^nz\in L\iff xy^{n+1}z\in L$ \cite{Mateescu1997}.
+
+\begin{definicion}[Clausura de Kleene de un lenguaje] La \textit{clausura de Kleene} de un lenguaje $L$, denotada por
+$L^*$, es la unión de todos exponentes no negativos de $L$, es decir:
+\begin{equation}
+    \bigcup_{i=0}^\infty L^i
+\end{equation}
+Asimismo, se define $L^+=\displaystyle\bigcup_{i=1}^\infty L^i$ 
+\end{definicion}
+
+La \textit{clausura de Kleene} es una operación que permite producir lenguajes infinitos a partir de finitos. Veamos
+ahora una propiedad de esta operación y los lenguajes formales, que demuestra que para lenguajes sobre un alfabeto con
+un único símbolo, su clausura es bastante simple.
+
+\begin{teorema} Para cada lenguaje $L$ sobre un alfabeto $\{a\}$, existe un lenguaje finito $L_F\subseteq L$ tal que
+$L^*=L_F^*$ \cite{Mateescu1997}.
+\end{teorema}
+\begin{proof}
+Si $L$ es finito, entonces $L_F=L$. Sea entonces $L$ infinito y $a^p$, $p\geq 1$, la palabra más pequeña no vacía en 
+$L$. Claramente, $\{a^p\}^*\subseteq L^*$, ya que como $a^p\in L$, entonces todos los exponentes de $a^p$ están en
+$L^*$. Si se da la igualdad (que se da cuando $p=1$), es decir, $\{a^p\}^*=L^*$, entonces $L_F=\{a^p\}$. En caso
+contrario, sea $a^{q_1}$ la palabra más pequeña de la diferencia $L^*-\{a^p\}^*$. Podemos escribir entonces $q_1$ como:
+\begin{equation}
+    q_1=t_1p+r_1,\;0<r_1<p,t_1\geq 1
+\end{equation}
+Podemos ver de nuevo que $\{a^p, a^{q_1}\}^*\subseteq L^*$. Si se da la igualdad, entonces $L_F=\{a^p, a^{q_1}\}$. De
+no ser así, continuamos el proceso tomando $a^{q_2}$ como la palabra más pequeña de la diferencia 
+$L^*-\{a^p, a^{q_1}\}^*$, siendo $q_2$ de la forma
+\begin{equation}
+    q_2=t_2p+r_2,\;0<r_2<p_2, r_2\neq r_1, t_2\geq 1
+\end{equation}
+Siguiendo este proceso, en el paso $k$-ésimo tomamos la palabra $a^{q_k}$, con
+\begin{equation}
+    q_k=t_kp+r_k,\;0<r_k<p, r_k\neq r_1, r_2, \dots, r_{k_1}, t_k\geq 1
+\end{equation}
+Puesto que solamente puede haber $p$ restos $r_i$, incluido el $0$ cuando se toma $p$, entonces tenemos que
+\begin{equation}
+    \{a^p, a^{q_1}, \dots, a^{q_s}\}^*=L^*,\;\text{para algún } s<p.
+\end{equation}
+\end{proof}
+
+Veamos ahora una propiedad que nos da una idea sobre la magnitud de posibles lenguajes sobre un alfabeto.
+
+\begin{teorema}El conjunto de todos los lenguajes sobre un alfabeto $\Sigma$ no es numerable.
+\end{teorema}
+\begin{proof}
+Supongamos que el conjunto de todos los lenguajes sobre $\Sigma$ es numerable, y llamémoslo $\mathbb{L}$. Puesto que
+$\mathbb{L}$ es numerable, puede ser enumerado de la forma $L_0,L_1,L_2,\dots$. Sabemos que $\Sigma^*$ es numerable,
+puesto que los alfabetos son finitos. Por tanto, puede ser enumerado como $w_0,w_1,w_2,\dots$\newline
+Sea $A=\{w_i\mid w_i\notin L_i\}$, es decir, $A$ es el conjunto de palabras que no pertenecen al lenguaje que tiene el 
+mismo índice que ellas. Es claro que $A$ es un lenguaje sobre $\Sigma$, de aquí que $A=L_k$ para algún $k$. Observamos 
+que si $w_k\in A$, entonces $w_k\notin L_k=A$. Por tanto, $w_k$ está y no está a la vez en $L_k$, llegando a una 
+contradicción. Por otro lado, si $w_k\notin A$, entonces, por la definición de $A$ tenemos que $w_k\in L_k=A$,
+llegando de nuevo a una contradicción.\newline
+Puesto que $w_k$ debe ser o no un elemento de $A$, tenemos que la suposición es falsa, por lo que el conjunto es no
+numerable \cite{kelley_2001}.
+\end{proof}
+
+Con esta propiedad, podemos ver que hay una cantidad innumerable de lenguajes que se pueden especificar sobre un
+alfabeto. No existe pues ningún método que los defina a todos a la vez.
+
+% -------------------------------------------------------------------------------------------------------------------
+\section{Gramáticas formales}
+
+Si bien los lenguajes se pueden especificar directamente, las gramáticas nos proporcionan otra forma de especificarlos
+y de clasificarlos. Una gramática es un mecanismo finito mediante el cual es posible generar las palabras de un 
+lenguaje \cite{Becerra2018}.
+
+\begin{definicion}[Gramática formal] Una \textit{gramática formal} o \textit{gramática} $G$ es una tupla $(N,T,S,P)$
+donde:
+\begin{itemize}
+    \item $N$ un alfabeto, denominado \textit{alfabeto no terminal}.
+    \item $T$ otro alfabeto, denominado \textit{alfabeto terminal}.
+    \item $S$, $S\in N$, es un símbolo denominado \textit{símbolo inicial} o \textit{axioma}.
+    \item $P$ es el conjunto de \textit{reglas de producción}. Una regla de producción es una pareja $(w,v)$ tal que
+    $w,v\in(N\cup T)^*$ y $w$ contiene al menos una letra de $N$. Se denotan normalmente como $w\to v$.
+\end{itemize}
+Además, $N\cap T=\emptyset$ \cite{Becerra2018}.
+\end{definicion}
+
+Veamos con un ejemplo esta definición. Tomando $N=\{A,S\}$ y $T=\{a,b\}$, definimos las reglas de producción:
+\begin{align}
+    S &\to ab & AS &\to bSb & A &\to\lambda \\
+    S &\to aASb & A&\to bSb & aASAb &\to aa
+\end{align}
+Entonces, si $P$ es el conjunto con las reglas de producción definidas y $S$ el símbolo inicial, tenemos que 
+$G=(N,T,S,P)$ es una gramática.
+
+\vspace{10pt}
+Para facilitar la escritura de las reglas de producción, podemos agrupar las reglas de producción que comparten
+símbolo a la izquierda mediante líneas verticales. Por ejemplo, para el ejemplo anterior, podemos compactar las
+reglas para $S$ como $S\to ab\mid aASb$.
+
+\begin{definicion}[Vocabulario total]Para una gramática $G$, se dice que $\Sigma_G=N\cup T$ es el 
+\textit{vocabulario total} de la gramática \cite{harrison_1978}. 
+\end{definicion}
+
+\begin{definicion}Sea $G=(N,T,S,P)$ una gramática y sean $\alpha,\beta\in\Sigma_G^*$. Se dice que $\alpha$
+\textit{genera directamente} $\beta$, denotado por $\alpha\Rightarrow\beta$, si existen 
+$\alpha_1,\alpha_2,\alpha',\beta'\in\Sigma_G^*$ tal que $\alpha=\alpha_1\alpha'\alpha_2$, 
+$\beta=\alpha_1\beta'\alpha_2$ y $\alpha'\to\beta'$ es un elemento de $P$. Escribimos $\xRightarrow{*}$ para la
+clausura reflexiva-transitiva de $\Rightarrow$ \cite{harrison_1978}.    
+\end{definicion}
+
+Volviendo al ejemplo anterior, podemos realizar la siguiente secuencia
+\begin{gather}\label{eq:derivacion_ejemplo}
+    S\Rightarrow a\underline{AS}b \underbrace{\Rightarrow}_{AS\Rightarrow bSb}ab\underline{S}bb
+    \underbrace{\Rightarrow}_{S\Rightarrow ab} ababbb \\
+    S\xRightarrow{*}(ab)^2b^2
+\end{gather}
+
+A la secuencia \eqref{eq:derivacion_ejemplo} se la denomina \textit{derivación} \cite{harrison_1978}.
+
+\begin{definicion}Sea $G=(N,T,S,P)$ una gramática. El conjunto de \textit{sentencias} de $G$, denotado por $S(G)$ es
+el conjunto
+\begin{equation}
+    S(G)=\{\alpha\in\Sigma_G^*\mid S\xRightarrow{*}\alpha\}
+\end{equation}
+es decir, el conjunto de palabras derivables desde $S$ \cite{harrison_1978}.
+\end{definicion}
+
+Tenemos, de esta manera, una forma de describir lenguajes a partir de una gramática y un alfabeto, mediante la
+siguiente definición.
+
+\begin{definicion}[Lenguaje generado]Sea $G=(N,T,S,P)$ una gramática. El \textit{lenguaje generado} por $G$, $L(G)$,
+es el conjunto
+\begin{equation}
+    L(G)=S(G)\cap T^*=\{w\in T^*\mid S\xRightarrow{*}w\}
+\end{equation}
+esto es, el conjunto de de derivaciones a partir de $S$ que terminan en palabras del alfabeto terminal 
+\cite{harrison_1978}.
+\end{definicion}
+
+\endinput
+%--------------------------------------------------------------------
+% FIN DEL CAPÍTULO. 
+%--------------------------------------------------------------------

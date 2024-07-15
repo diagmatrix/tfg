@@ -1,0 +1,537 @@
+% !TeX root = ../tfg.tex
+% !TeX encoding = utf8
+
+\chapter{Gramáticas libres de contexto}\label{chap:CFG}
+
+El tipo de lenguajes y gramáticas que definen los regulares es bastante limitado. Por ejemplo, una gramática con
+reglas de producción que se corresponderían con lineales por la izquierda y por la derecha combinadas, como pueden ser
+\begin{align}
+    S\quad&\to\quad 0A \\
+    S\quad&\to\quad 1B \\
+    S\quad&\to\quad\lambda \label{eq:glc} \\ 
+    A\quad&\to\quad S0 \\
+    B\quad&\to\quad S1
+\end{align}
+generan el lenguaje $L=\{ww^n\mid w\in\{0,1\}^*\}$, que no es un lenguaje regular \cite{pfenning_2000}.
+
+\vspace{10pt}
+Podemos hacernos una idea de que este tipo de gramáticas no son suficientes para la especificación de un lenguaje de
+programación. Por ejemplo, una estructura de control (como un condicional \textit{if-else}) o un bloque de código va a 
+necesitar de varios símbolos terminales que indiquen el inicio y final de la estructura, como pueden ser paréntesis.
+
+\vspace{10pt}
+Definimos una clase de gramáticas capaces de generar lenguajes más complejos, como el generado por las reglas de
+producción definidas por \eqref{eq:glc} o, en nuestro caso, el lenguaje creado para la herramienta.
+
+\begin{definicion}[Gramática libre de contexto]Una \textit{gramática libre de contexto} es una gramática $G=(N,T,S,P)$
+en la que las reglas de producción son de la forma:
+\begin{equation}
+    A \to w
+\end{equation}
+donde $A\in N$ y $w\in\Sigma_G^*$, es decir, la parte derecha de las reglas de producción puede ser cualquier
+combinación de símbolos terminales y no terminales.
+\end{definicion}
+
+Cuando nos refiramos a una gramática en este capítulo, nos estaremos refiriendo a este tipo concreto de gramáticas.
+Definimos ahora la clase de lenguajes que generan.
+
+\begin{definicion}[Lenguaje libre de contexto]Diremos que un lenguaje $L$ es \textit{libre de contexto} si existe una
+gramática libre de contexto $G$ tal que $L(G)=L$ \cite{kelley_2001}.
+\end{definicion}
+
+Es fácil ver que las gramáticas regulares forman parte de la clase de gramáticas libres de contexto, puesto que todas
+sus producciones cumplen la condición. De la misma manera, los lenguajes regulares son un subconjunto de los lenguajes
+libres de contexto.
+
+\vspace{10pt}
+Para este tipo de gramáticas más complejas, lo usual es escribir las derivaciones mediante un árbol, denominado
+\textit{árbol de derivación}. Un árbol de derivación para una derivación dada se construye creando un nodo raíz, 
+etiquetado con el símbolo inicial. El nodo raíz tiene unos nodos hijos para cada símbolo que aparezca en el lado
+derecho de la producción usada. Todo nodo etiquetado con un no terminal también tiene unos nodos hijos etiquetados con 
+los símbolos del lado derecho de su producción \cite{kelley_2001}.
+
+\vspace{10pt}
+Una particularidad de este tipo de gramáticas es que pueden existir varias derivaciones posibles para la misma cadena.
+Veamos un ejemplo de ello. Vamos a tomar una gramática con $N=\{S\}$, $T=\{a,b,c\}$, $S=S$ y reglas de producción:
+\begin{equation}
+    S\to SbS\mid ScS\mid a
+\end{equation}
+Vamos a ver dos formas de generar la palabra $abaca$ con esta gramática:
+\begin{enumerate}
+    \item $S\Rightarrow SbS\Rightarrow SbScS\Rightarrow SbSca\Rightarrow Sbaca\Rightarrow abaca$
+    \item $S\Rightarrow ScS\Rightarrow SbScS\Rightarrow abScS\Rightarrow abacS\Rightarrow abaca$
+\end{enumerate}
+
+\begin{figure}[ht!]
+    \centering
+    \begin{subfigure}[c]{0.45\textwidth}
+    \centering
+    \begin{forest}
+    [S
+    [S [a] ]
+    [b]
+    [S 
+    [S [a] ]
+    [c]
+    [S [a]]
+    ]
+    ]
+    \end{forest}
+    \end{subfigure}
+    \begin{subfigure}[c]{0.45\textwidth}
+    \centering
+    \begin{forest}
+    [S
+    [S
+    [S [a]]
+    [b]
+    [S [a]]
+    ]
+    [c]
+    [S [a]]
+    ]
+    \end{forest}
+    \end{subfigure}
+    \caption{Árboles para la derivación 1 y 2 de $abaca$, respectivamente}
+    \label{fig:bosque-1}
+\end{figure}
+
+Podemos ver que los árboles de la figura \ref{fig:bosque-1} son distintos, aunque la cadena sea la misma. Es posible
+que derivaciones distintas generen el mismo árbol o, como es el caso de este ejemplo, no \cite{kelley_2001}.
+
+\vspace{10pt}
+Una gramática diremos que es \textbf{\textit{ambigua}} si hay dos o más árboles de derivación distintos para la misma
+cadena. Una gramática en la que, por el contrario, para toda palabra $w$, todas sus derivaciones tengan el mismo árbol,
+se denomina \textbf{\textit{no ambigua}}. La ambigüedad puede ser un problema para ciertos lenguajes en los que su
+significado depende de su estructura, como los lenguajes de programación \cite{kelley_2001}.
+
+% -------------------------------------------------------------------------------------------------------------------
+\section{Transformaciones}
+
+Resulta interesante establecer restricciones y transformaciones que nos permitan construir árboles de derivación que
+no sean necesariamente complejos o inútilmente sencillos. Por otro lado, estas restricciones no debieran constreñir la
+formación de producciones hasta el punto de resultar inútiles para la generación de lenguajes libres de contexto. El
+objetivo es, por tanto, encontrar un modelo formal estándar para las producciones \cite{kelley_2001}.
+
+% -------------------------------------------------------------------------------------------------------------------
+\subsection{Gramáticas positivas}
+
+\vspace{10pt}
+En primer lugar, definimos las producciones de la forma $A\to\lambda$ como \textbf{\textit{producciones nulas}}. 
+Decimos que una gramática independiente del contexto $G$ es \textbf{\textit{positiva}} si ninguna de las producciones 
+de $G$ es nula. Es claro que cualquier gramática tal que $\lambda\in L(G)$ no puede ser positiva. Vamos a ver que, 
+eliminando ese caso, cualquier propiedad que pueda tener una gramática libre de contexto, se aplica a las gramáticas 
+positivas \cite{davis_sigal_weyuker_1994}.
+
+\begin{definicion}[Núcleo]Definimos el \textit{núcleo} de una gramática libre de contexto $G=(N,T,S,P)$, $\ker(G)$, al 
+conjunto de símbolos no terminales $V\subseteq N$ tal que $V\xRightarrow{*}\lambda$ \cite{davis_sigal_weyuker_1994}.
+\end{definicion}
+
+El proceso para calcular el núcleo de una gramática libre de contexto $G$ es el siguiente:
+\begin{enumerate}
+    \item Añadir a $\ker(G)$ todos los símbolos no terminales para los cuales existe una producción nula.
+    \item Repetir el siguiente proceso
+    \begin{quote}
+        Si $B\to w$ para algún $w\in\Sigma_G^*$ y todos los símbolos de $w$ están en $\ker(G)$, añadir $B$ al núcleo.
+    \end{quote}
+    hasta que no se añadan más no terminales a $\ker(G)$ \cite{kelley_2001}.
+\end{enumerate}
+
+Una vez somos capaces de encontrar el núcleo de una gramática, vamos a intentar producir gramáticas equivalentes cuyo
+núcleo sea vacío, esto es, sean positivas. El siguiente lema nos proporciona una manera de conseguirlo.
+
+\begin{lema}\label{lem:prod-lamb}Sea una gramática libre de contexto $G$, existe una gramática libre de contexto 
+positiva $G'$ tal que $L(G)=L(G')$ o $L(G)=L(G')\cup\{\lambda\}$ 
+\cite{davis_sigal_weyuker_1994}.
+\end{lema}
+\begin{proof}
+Comenzamos en primer lugar calculando $\ker(G)$. Después, vamos a construir las reglas de producción de 
+$G'=(N,T,S,P')$ de la siguiente manera:
+\begin{enumerate}
+    \item Añadimos a $P'$ todas las producciones que puedan obtenerse de $G$ eliminando de la parte derecha uno o más
+    símbolos no terminales que pertenezcan a $\ker(G)$.
+    \item Eliminamos todas las producciones (tanto las que se han obtenido directamente como las que han eliminado 
+    símbolos) que sean nulas.
+\end{enumerate}
+Por ejemplo, si las producciones de $G$ fueran
+\begin{equation}\label{eq:ejemplo-glc}
+    S\to XYYX\quad S\to aX\quad X\to\lambda\quad Y\to\lambda
+\end{equation}
+las producciones de $G'$ serían
+\begin{align}
+    S &\to XYYX & S &\to aX & S &\to a & S &\to YYX & S &\to XYX & S &\to XYY \\
+    S &\to XY & S &\to YY & S &\to YX & S &\to XX & S &\to X & S &\to Y
+\end{align}
+Probamos ahora que $L(G)=L(G')$ o $L(G)=L(G')\cup\{\lambda\}$. Sea $V\to\beta_1\beta_2\cdots\beta_s$ una producción de
+$G'$ que no es una producción de $G$, donde $\beta_1,\beta_2,\dots,\beta_s\in\Sigma_G$, y que fue obtenida de una
+producción de $G$ de la forma
+\begin{equation}
+    V\to u_0\beta_1u_1\beta_2\cdots\beta_su_s
+\end{equation}
+con $u_0,u_1,\dots,u_s\in(\ker(G))^*$. Ahora, por ser elementos del núcleo, tenemos que $u_i\xRightarrow{*}\lambda$,
+$i=0,1,\dots,s$, por lo que
+\begin{equation}
+    V\Rightarrow u_0\beta_1u_1\beta_2\cdots\beta_su_s\xRightarrow{*}\beta_1\beta_2\cdots\beta_s
+\end{equation}
+Por tanto, esta producción de $G'$ puede simularse en $G$. Esto prueba que $L(G')\subseteq L(G)$. Veamos ahora que si
+$w\in L(G)$ y $w\neq\lambda$, entonces $w\in L(G')$. Lo probaremos mediante inducción sobre la siguiente afirmación:
+\begin{quote}
+    Sea $V\in N$, si $V\xRightarrow[G]{*}w\neq\lambda$ para $w\in T^*$, entonces $V\xRightarrow[G']{*}w$, donde 
+    $\xRightarrow[G]{*}$ significa derivación en la gramática $G$.
+\end{quote}
+ Si tenemos que $w$ se deriva directamente de $V$, esto es, $G$ contiene la regla de producción $V\to w$, entonces
+también es una regla de producción de $G'$ y $V\xRightarrow[G']{*}w$. En caso contrario podemos escribir
+\begin{equation}
+    V\xRightarrow[G]{} w_0V_1w_1V_2w_2\cdots V_sw_s\xRightarrow[G]{*}w
+\end{equation}
+donde $V_1,\dots,V_s\in N$ y $w_0,\dots,w_s\in T\cup\{\lambda\}$. Entonces podemos escribir $w$ como
+\begin{equation}
+    w=w_0v_1w_1v_2w_2\cdots v_sw_s
+\end{equation}
+donde $V_i\xrightarrow[G]{*}v_i$, $i=1,2,\dots,s$. Puesto que $v_i$ debe tener una derivación más ``corta'' desde $V_i$
+que $w$ desde $V$, podemos proceder inductivamente asumiendo que para cada $v_i\neq\lambda$, 
+$V_i\xRightarrow[G']{*}v_i$. Por otro lado, si $v_i=\lambda$, entonces $V_i\in\ker(G)$. Construimos:
+\begin{equation}
+    V_i^{\lambda}=\begin{cases}
+        \lambda & \text{si }v_i=\lambda \\
+        V_i & \text{ en cualquier otro caso}
+    \end{cases}
+\end{equation}
+Tenemos pues que $V\to w_0V_1^{\lambda}w_1V_2^{\lambda}w_2\cdots V_s^{\lambda}w_s$ es una producción de $G'$. Tenemos
+por tanto
+\begin{equation}
+    V\xRightarrow[G']{} w_0V_1^{\lambda}w_1V_2^{\lambda}w_2\cdots V_s^{\lambda}w_s\xRightarrow[G']{*}
+    w_0v_1w_1v_2w_2\cdots v_sw_s=w
+\end{equation}
+con lo que damos la prueba por finalizada \cite{davis_sigal_weyuker_1994}.
+\end{proof}
+
+Este resultado nos permite construir, a partir de gramáticas, otras positivas que mantienen el lenguaje que generan.
+Otra forma de expresar el teorema \ref{lem:prod-lamb} es la siguiente:
+
+\begin{teorema}Un lenguaje $L$ es libre de contexto si y sólo si existe una gramática libre de contexto positiva $G$
+tal que $L=L(G)$ o $L=L(G)\cup\{\lambda\}$ \cite{davis_sigal_weyuker_1994}.
+\end{teorema}
+
+% -------------------------------------------------------------------------------------------------------------------
+\subsection{Gramáticas ramificadas}
+
+Definimos ahora otro tipo de producciones que vamos a poder eliminar de las gramáticas libres de contexto manteniendo
+un cierto control sobre el lenguaje que generan. Sea $A\to B$ una producción donde $A$ y $B$ son símbolos no 
+terminales, diremos que se trata de una \textbf{\textit{producción unitaria}} o \textbf{\textit{no generativa}}
+\cite{kelley_2001}. Definimos entonces un nuevo tipo de gramáticas, las \textbf{\textit{gramáticas ramificadas}}
+(\textit{branching grammars} en inglés)
+
+\begin{definicion}[Gramática ramificada]Una gramática libre de contexto positiva se denomina \textit{ramificada} si
+ninguna de sus producciones es unitaria.    
+\end{definicion}
+
+Veamos ahora que, de igual manera que para las positivas, podemos encontrar gramáticas ramificadas equivalentes a una
+dada.
+
+\begin{lema}\label{lem:prod-unit}Sea una gramática libre de contexto positiva $G$, existe una gramática libre de 
+contexto ramificada $G'$ tal que $L(G)=L(G')$ \cite{davis_sigal_weyuker_1994}.
+\end{lema}
+\begin{proof}
+Sea $G=(N,T,S,P)$ una gramática libre de contexto positiva. Supongamos que $P$ contiene las producciones
+\begin{equation}\label{eq:prod-unit}
+    X_1\to X_2\quad X_2\to X_3\quad \cdots \quad X_k\to X_1
+\end{equation}
+donde $k\leq 1$ y $X_1,\dots,X_k\in N$. Entonces, podemos eliminar esas producciones y reemplazar cada variable $X_i$
+en el resto de producciones de $G$ con una nueva variable $Y$ (En caso de que $S=X_i$, $Y$ pasa a ser el símbolo 
+inicial) Es claro ver que el lenguaje resultante no cambia con estas transformaciones.\\
+Debemos por tanto considerar únicamente el caso donde no hay ``ciclos'' como el de \eqref{eq:prod-unit} en $G$. Si
+$G$ no es ramificada, entonces debe contener al menos una producción $X\to Y$ tal que $G$ no contiene producciones de
+la forma $Y\to Z$. Eliminamos la producción $X\to Y$, pero creamos las nuevas producciones $X\to w$ por cada palabra
+$w\in\Sigma_G^*$ tal que $Y\to w$ es una producción de $G$. De nuevo, el lenguaje generado por esta nueva gramática no
+cambia, pero el número de producciones unitarias ha decrecido. Iterando en este proceso obtenemos una gramática $G'$
+que no contiene nignuna producción unitaria, es decir, es ramificada \cite{davis_sigal_weyuker_1994}.
+\end{proof}
+
+\subsection{Forma normal de Chomsky}
+
+Como última etapa en la simplificación de gramáticas libres de contexto, podemos restringir las gramáticas para que
+contengan únicamente dos tipos de producciones: las que tienen en la parte derecha o un símbolo terminal o dos símbolos
+no terminales. Cuando una gramática tiene las producciones de esa forma, se dice que está en 
+\textbf{\textit{forma normal de Chomsky}}. Formalmente:
+
+\begin{definicion}Una gramática libre de contexto $G=(N,T,S,P)$ se dice que está en \textit{forma normal de Chomsky} si
+cada una de sus producciones es de la forma
+\begin{equation}
+    A\to XY \quad\text{o}\quad A\to a 
+\end{equation}
+donde $A,X,Y\in N$ y $a\in T$ \cite{davis_sigal_weyuker_1994}.
+\end{definicion}
+
+De la misma manera que para las ramificadas y las positivas, podemos asegurar que el lenguaje generado por una 
+gramática y su correspondiente en forma normal generan el mismo lenguaje.
+
+\begin{lema}Sea una gramática libre de contexto positiva $G$, existe una gramática en forma normal de Chomsky $G'$ tal 
+que $L(G)=L(G')$ \cite{davis_sigal_weyuker_1994}.    
+\end{lema}
+\begin{proof}
+Sea $G=(N,T,S,P)$, mediante el lema \ref{lem:prod-unit}, obtenemos una gramática ramificada $G_r=(N,T,S_r,P_r)$ a 
+partir de ella. Después, continuamos ``disfrazando'' los símbolos terminales por no terminales. Esto es, por cada
+$a\in T$, introducimos un nuevo símbolo no terminal $X_a$. Después, modificamos las producciones de $G_r$ reemplazando
+cada producción $X\to x$ donde $x$ no es un único símbolo terminal por $X\to x'$, donde $x'$ se obtiene intercambiando
+cada símbolo terminal $a$ que lo compone por su correspondiente nueva variable $X_a$. Después, añadimos todas las
+producciones de la forma $X_a\to a$. Claramente el lenguaje generado por esta nueva gramática genera el mismo lenguaje
+y tiene todas sus producciones en una de las dos siguientes formas:
+\begin{align}
+    X&\to X_1X_2\cdots X_k,\quad k\leq 2 \label{eq:chomsky-elim} \\
+    X&\to a
+\end{align}
+donde $X_1,X_2,\dots,X_k$ son símbolos terminales y $a\in T$. Para obtener una gramática en forma normal, tenemos que
+eliminar todas las producciones \eqref{eq:chomsky-elim} con $k>2$. Podemos realizar esto introduciendo nuevas variables
+$Z_1,Z_2,\dots,Z_{k-2}$ y reemplazando ese tipo de producciones por las producciones:
+\begin{align}
+    X\quad&\to\quad X_1Z_1 \\
+    Z_1\quad&\to\quad X_2Z_2 \\
+    &\dotsc \\
+    Z_{k-3}\quad&\to\quad X_{k-2}Z_{k-2} \\
+     Z_{k-2}\quad&\to\quad X_{k-1}X_k \\
+\end{align}
+obteniendo de esa manera una gramática en forma normal de Chomsky que genera el lenguaje $L(G)$ 
+\cite{davis_sigal_weyuker_1994}.
+\end{proof}
+
+Veamos ahora un ejemplo de todo este proceso. Usaremos como ejemplo una gramática con las siguientes reglas de
+producción:
+\begin{equation}
+    S\to aXbY\quad X\to aX\quad X\to a\quad Y\to bY\quad Y\to b
+\end{equation}
+Esta gramática genera el lenguaje $\{a^nb^m\mid n,m\geq 2\}$. Vamos a transformar esta gramática en una equivalente en
+forma normal de Chomsky:
+\begin{enumerate}
+    \item Eliminamos las producciones unitarias. Como no hay de este tipo en la gramática, podemos saltarnos este paso.
+    \item ``Disfrazamos'' los símbolos terminales como no terminales. Obtenemos entonces las siguientes producciones:
+\begin{equation}
+    S\to X_aXX_bY\quad X\to X_aX\quad X\to a\quad X_a\to a\quad Y\to X_bY\quad Y\to b\quad X_b\to b
+\end{equation}
+    \item Obtenemos la forma normal de Chomsky reemplazando la producción $S\to X_aXX_bY$ por las producciones:
+\begin{equation}
+    S\to X_aZ_1\quad Z_1\to XZ_2\quad Z_2\to X_bY
+\end{equation}
+Obtenemos finalmente la gramática en forma normal de Chomsky con las producciones:
+\begin{gather}
+    S\to X_aZ_1 \quad Z_1\to XZ_2 \quad Z_2\to X_bY \quad X\to X_aX \quad Y\to X_bY \\
+    X\to a \quad X_a\to a \quad Y\to b \quad X_b\to b
+\end{gather}
+\end{enumerate}
+
+% -------------------------------------------------------------------------------------------------------------------
+\section{Validación}
+
+Una de las tareas críticas de un intérprete es la validación de sentencias. Esto es, determinar si una sentencia
+es correcta en el lenguaje y puede ejecutarse o no. La validación asegura que el código escrito en un lenguaje sigue
+las reglas gramaticales. Por otro lado, la identificación de estos errores es crucial para la prevención de errores
+posteriores de ejecución.
+
+\vspace{10pt}
+Hasta ahora hemos definido maneras de transformar una gramática libre de contexto hasta llegar a su forma normal de 
+Chomsky, pero ninguna manera de comprobar que una cadena se puede generar con la gramática. El siguiente resultado 
+responde a la pregunta de la validación: Dado un lenguaje libre de contexto $L$ sobre un alfabeto $\Sigma$ y una 
+cadena $w\in\Sigma^*$, ¿está $w$ en $L$?
+
+\begin{lema}\label{lem:validacion}Sea $G=(N,T,P,S)$ una gramática libre de contexto en forma normal de Chomsky. Sea
+$x$ una cadena de $T^*$. Se puede determinar, para cada $A\in N$ y para subcadena $w$ de $x$, si 
+$A\xRightarrow{*}w$ \cite{kelley_2001}.
+\end{lema}
+\begin{proof}
+Sea $n=|x|$. Puesto que hay muchas subcadenas de $x$, las nombraremos mediante su posición inicial y su longitud. De
+esta manera, $w_{ij}$ denota la subcadena que comienza en la posición $i$-ésima y tiene longitud $j$. Probaremos que
+el lema se cumple para todo $w_{ij}$ mediante inducción sobre la longitud de la subcadena.\\
+Supongamos que $j=1$. Entonces $|w_{ij}|=1$ y entonces es un elemento de $T$. Como la gramática está en forma normal
+de Chomsky, para algún no terminal $A$ se tiene que $A\xRightarrow{*}w_{ij}$ si existe una producción $A\to w_{ij}$ en 
+$P$. Puesto que $P$ es finito, se puede determinar.\\
+Supongamos ahora que $j>1$ y que la afirmación se cumple para toda subcadena de longitud menor que $j$. Observamos que
+$A\xRightarrow{*}w_{ij}$ si y sólo si $A\to BC$ para algún par $B,C\in N$ para los cuales $B\xRightarrow{*}w_{ik}$ y
+$C\xRightarrow{*}w_{i+k,j-k}$ para algún $k$ entre $1$ y $j-1$. Entonces, tanto $w_{ik}$ como $w_{i+k,j-k}$ tienen
+longitud menor que $j$ y, por hipótesis de inducción, podemos determinar si $B\xRightarrow{*}w_{ik}$ y si 
+$C\xRightarrow{*}w_{i+k,j-k}$, por lo que también podemos determinar si $A\xRightarrow{*}w_{ij}$. \\
+De esta manera, podemos determinar si $A\xRightarrow{*}w_{ij}$ para $1\leq i\leq n$ y $1\leq j\leq n-i+1$, que es el
+conjunto de todas las subcadenas de $x$ \cite{kelley_2001}.
+\end{proof}
+
+\subsubsection*{Algoritmo CYK}
+
+Por la construcción de la demostración, podemos ver que si $j=n$ entonces se puede determinar si $S\xRightarrow{*}w_{ij}=w_{in}=x$. Es decir, este lema nos permite determinar si $x\in L(G)$ para cada $x\in T^*$. Sin embargo, no nos
+proporciona una manera de comprobarlo directamente. Para determinar si una cadena pertenece a un lenguaje, existen
+distintos algoritmos. Nosotros vamos a presentar el algoritmo de Cocke, Younger y Kasami o 
+\textbf{\textit{algoritmo CYK}}. Este método construye conjuntos $N_{ij}$ de no terminales que generan las subcadenas 
+$w_{ij}$ de $x$. Después, si $S\in N_{1n}$, entonces $x\in L(G)$. Este algoritmo tiene los siguientes pasos, para una 
+cadena $x$ con $n=|x|$:
+\begin{enumerate}
+    \item Para cada $i=1,2,\dots,n$, se construyen el conjunto
+    \begin{equation}
+        N_{i1}=\{A\mid A\to w_{i1}\}
+    \end{equation}
+    es decir, el conjunto de todos los no terminales que producen el $i$-ésimo símbolo de $x$.
+    \item Para cada $j=2,3,\dots,n$, realizar, para $i=1,2,\dots,n-j+1$ el siguiente conjunto de pasos:
+        \begin{enumerate}
+            \item Crear el conjunto $N_{ij}=\emptyset$.
+            \item Para $k=1,2,\dots,j-1$, añadir a $N_{ij}$ todos los no terminales $A$ para los cuales $A\to BC$, con
+            $B\in N_{ik}$ y $C\in N_{i+k,j-k}$.
+        \end{enumerate}
+    \item Si $S\in N_{1n}$, entonces $x\in L(G)$ \cite{kelley_2001}.
+\end{enumerate}
+
+% -------------------------------------------------------------------------------------------------------------------
+\section{Autómatas de pila}
+
+Las gramáticas libres del contexto amplían la capacidad para especificar lenguajes al incluir algunos que no son 
+reconocibles por un autómata finito. Intuitivamente, el problema de los autómatas finitos es que sólo tienen capacidad 
+para una ``memoria'' finita \cite{kelley_2001}. 
+
+\vspace{10pt}
+Lenguajes libres de contexto, como puede ser el que genera palabras palíndromas con dos símbolos $\{a^nb^n\mid n>0\}$ 
+necesitan guardar mucha información. No sólo se debe verificar que todos los símbolos $a$ preceden a los $b$, sino que 
+también tienen que contarse el número de símbolos $a$. Otros lenguajes libres de contexto, como puede ser 
+$\{wcw^-1\mid w\in\{a,b,c\}^*\}$ no sólo necesita una capacidad sin límites para contar símbolos, sino que debe guardar
+los símbolos de la cadena $w$ para compararlos con $w^-1$ \cite{kelley_2001}.
+
+\vspace{10pt}
+Vamos a definir un autómata que cuenta con un mecanismo que permite el almacenamiento ilimitado y se comporta como una
+pila, siendo su comportamiento similar al de uno finito. A este tipo de autómata lo llamaremos 
+\textbf{\textit{autómata de pila}}.
+
+\begin{definicion}[Autómata de pila] Un \textit{autómata de pila} (ADP) es una $7$-tupla, 
+$M=(Q,\Sigma,\Gamma,\Delta,s,F,z)$ donde
+\begin{enumerate}[(i)]
+    \item $Q$ es un conjunto finito de estados.
+    \item $\Sigma$ es un alfabeto de entrada.
+    \item $\Gamma$ es un alfabeto denominado \textit{alfabeto de la pila}.
+    \item $\Delta$ es una regla de transición, definida por medio de ternas de la forma $(q,\sigma,\gamma)$, donde 
+    $q\in Q$, $\sigma\in\Sigma\cup\{\lambda\}$ y $\gamma\in\Gamma$. El resultado es una colección de pares $(p,w)$, 
+    donde $p\in Q$ es el estado siguiente y $w\in\Gamma^*$ es la cadena que se introducirá en la pila en lugar del 
+    símbolo $\gamma$ que estaba antes allí.
+    \item $s\in Q$ es el estado inicial o de partida.
+    \item $z\in\Gamma$ es el símbolo inicial de la pila.
+    \item $F\subseteq Q$ es el conjunto de estados finales o de aceptación.
+\end{enumerate}
+Este tipo de autómatas es no determinista, por lo que se les conoce también como 
+\textit{autómatas de pila no deterministas} \cite{kelley_2001}.
+\end{definicion}
+
+Durante el procesamiento de una cadena, se puede describir de forma única la configuración actual de un APD en función
+de su estado actual, los contenidos de la pila y la entrada no leída. A la terna que contiene esos tres valores se la
+denomina \textbf{\textit{descripción instantánea}} del autómata. Indicaremos el movimiento de una descripción 
+instantánea a otra mediante el símbolo $\vdash$. De esta manera,
+\begin{equation}
+    (q_1,aw,bx)\vdash(q_2,w,yx)
+\end{equation}
+representa el movimiento que resulta de $(q_2,y)\in\Delta(q_1,a,b)$. Podemos denotar los movimientos con un número
+arbitrario de pasos mediante $\vdash^+$ y $\vdash^*$, donde $+$ indica uno o más pasos y $*$ indica cero o más pasos
+\cite{kelley_2001}.
+
+\vspace{10pt}
+Al igual que para los autómatas finitos, podemos definir el lenguaje aceptado por un autómata de pila. Sea entonces
+$M=(Q,\Sigma,\Gamma,\Delta,s,F,z)$, el lenguaje aceptado por $M$, $L(M)$ es el conjunto
+\begin{equation}
+    L(M)=\{w\in\Sigma^*\mid (s,w,z)\vdash^*(p,\lambda,u)\text{ para }p\in F\text{ y }u\in\Gamma^*\}
+\end{equation}
+Observamos que la aceptación requiere que el autómata se mueva a un estado final cuando se agote la cadena, 
+independientemente del estado de la pila. Sin embargo, cuando la pila se vacía el ADP debe parar, ya que para cualquier
+transición es necesario un símbolo de la pila \cite{kelley_2001}.
+
+\vspace{10pt}
+Veamos ahora un ejemplo de ADP. Vamos a construir un autómata $M$ cuyo lenguaje generado sea el siguiente:
+\begin{equation}
+    L(M)=\{w\in\{a,b\}^*\mid w\text{ contiene la misma cantidad de }a\text{ y }b\}
+\end{equation}
+Para ello, utilizaremos la pila introduciendo símbolos cuando se lea uno de los caracteres y eliminándolo cuando se
+lea el otro. El autómata resultante es el siguiente:
+\begin{itemize}
+    \item $Q={q_1,q_2}$
+    \item $\Sigma=\{a,b\}$
+    \item $\Gamma=\{A,B,Z\}$
+    \item $s=q_1$
+    \item $\gamma=Z$
+    \item $F=\{q_2\}$
+\end{itemize}
+y $\Delta$ es la dada por:
+\begin{align}
+    \Delta(q_1,\lambda,Z)&=\{(q_2,Z)\} & \Delta(q_1,a,Z)&=\{(q_1,AZ)\} & \Delta(q_1,b,Z)&=\{(q_1,BZ)\} & \\
+    \Delta(q_1,a,A)&=\{(q_1,AA)\} & \Delta(q_1,b,A)&=\{(q_1,\lambda)\} & \Delta(q_1,a,B)&=\{(q_1,\lambda)\} \\\Delta(q_1,b,B)&=\{(q_1,BB)\}
+\end{align}
+Para procesar la cadena $abba$, el autómata realiza los siguientes movimientos:
+\begin{equation}
+    (q_1,abba,Z)\vdash(q_1,bba,AZ)\vdash(q_1,ba,Z)\vdash(q_1,a,BZ)\vdash(q_1,\lambda,Z)\vdash(q_2,\lambda,Z)
+\end{equation}
+Puesto que termina en $q_2$, nuestro ADP acepta correctamente $abba\in L(M)$ \cite{kelley_2001}.
+
+\vspace{10pt}
+Veamos ahora a construir un ADP a partir de una gramática libre del contexto. Sea $G$ una gramática cuyas producciones 
+son $S\to aSa\mid bSb\mid c$, entonces el autómata de pila correspondiente tiene la siguiente regla de transición:
+\begin{align}
+    \Delta(q_1,\lambda,z)&=\{(q_2,Sz)\} \\
+    \Delta(q_2,\lambda,S)&=\{(q_2,aSa),(q_2,bSb),(q_2,c)\} \\
+    \Delta(q_2,a,a)&=\Delta(q_2,b,b)=\Delta(q_2,c,c)=\{(q_2,\lambda)\} \\
+    \Delta(q_2,\lambda,z)&=\{(q_3,z)\}
+\end{align}
+donde $q_3$ es el estado de aceptación. Podemos ver cómo la información sobre las producciones se almacena en la pila,
+extrayéndose cuando los símbolos no terminales se van transformando en terminales \cite{kelley_2001}.
+
+\section{Autómatas de pila y lenguajes libres de contexto}
+
+Al igual que los autómatas finitos y los lenguajes regulares, existe una equivalencia entre los lenguajes libres de
+contexto y los ADP. Vamos a deducir de forma no completamente formal esta equivalencia, muy importante, puesto que nos
+permite construir máquinas que acepten este tipo de lenguajes. Particularmente, esta equivalencia nos asegura que el
+lenguaje creado para la herramienta puede ser interpretado.
+
+\begin{teorema}\label{teo:llc-1}Sea $L$ un lenguaje libre de contexto. Entonces existe un autómata de pila $M$ tal que 
+$L=L(M)$.
+\end{teorema}
+\begin{proof}
+Vamos a dar una prueba no formal de este teorema. Para ello, supongamos que hemos construido un ADP a partir de una
+gramática libre de contexto de la misma manera que en el ejemplo anterior. Si tenemos que
+\begin{equation}
+    (q_i,x,A\alpha)\vdash(q_i,x,\beta\alpha)
+\end{equation}
+entonces es posible que en la gramática $A\xRightarrow{*}\beta$, donde $q_i\in Q$, $x\in\Sigma^*$ y 
+$A,\alpha,\beta\in\Gamma$. Por tanto, si $w=a_1a_2\cdots a_n$ es aceptada por el autómata, debemos tener que
+\begin{align}
+    (q_i,a_1a_2\cdots a_n,Sz)&\vdash^*(q_i,a_1a_2\cdots a_n,a_1\beta_1z)\vdash(q_i,a_2\cdots a_n,\beta_1z) \\
+    &\vdash^*(q_i,a_n,a_nz)\vdash(q_i,\lambda,z)\vdash(q_f,\lambda,z)
+\end{align}
+donde $q_f\in F$. Obtenemos de esos movimientos las siguientes derivaciones:
+\begin{equation}
+    S\xRightarrow{*}a_1\beta_1\xRightarrow{*}a_1a_2\beta_2\xRightarrow{*}\dots\xRightarrow{*}a_1\cdots a_n=w
+\end{equation}
+Por consiguiente, si $w$ es aceptada por el autómata, entonces $w$ se deriva de la gramática. \\
+Inversamente, supongamos que tenemos una gramática en la forma normal de Chomsky. Si $S\xRightarrow{*}a_1\cdots a_n$,
+entonces tendremos una derivación de $a_1a_2\cdots a_n$ de la forma
+\begin{equation}
+    S\xRightarrow{*}A_1\alpha_1\Rightarrow a_1\alpha_1\xRightarrow{*}a_1A_2\alpha_2\Rightarrow a_1a_2\alpha_2
+    \xRightarrow{*}a_1a_2\cdots a_n
+\end{equation}
+Por tanto, en un autómata de pila derivado de esa gramática, se puede tener la secuencia:
+\begin{align}
+    (q_i,a_1a_2\cdots a_n,Sz)&\vdash^*(q_i,a_1a_2\cdots a_n,a_1\alpha_1z)\vdash(q_i,a_2\cdots a_n,\alpha_1z) \\
+    &\vdash^*(q_i,\lambda,z)\vdash(q_f,\lambda,z)
+\end{align}
+Es decir, el ADP acepta la cadena $w=a_1a_2\cdots a_n$ \cite{kelley_2001}.
+\end{proof}
+
+Tenemos, por otro lado, el resultado análogo, que no probaremos pero que nos dice que la implicación inversa es cierta.
+
+\begin{teorema}\label{teo:llc-2}Sea $M$ un autómata de pila. Entonces $L(M)$ es un lenguaje libre de contexto.
+\end{teorema}
+
+Llegamos finalmente al resultado completo:
+
+\begin{teorema}Un lenguaje es libre de contexto sí y sólo si es aceptado por un autómata de pila.
+\end{teorema}
+\begin{proof}
+Este teorema es consecuencia de los teoremas \ref{teo:llc-1} y \ref{teo:llc-2}.
+\end{proof}
+
+Tenemos, como con los autómatas finitos, una triple equivalencia o ``ciclo'' entre las gramáticas libres de contexto, los
+lenguajes libres de contexto y los autómatas de pila. Esta equivalencia es muy útil, puesto que nos asegura que, 
+determinando una gramática libre de contexto, que es justamente las de los lenguajes de programación, podemos construir
+una máquina capaz de interpretar el lenguaje que ésta genera.
+
+\endinput
+%--------------------------------------------------------------------
+% FIN DEL CAPÍTULO. 
+%--------------------------------------------------------------------

@@ -1,0 +1,247 @@
+% !TeX root = ../tfg.tex
+% !TeX encoding = utf8
+
+\chapter{Lenguajes específicos de dominio}\label{chap:DSL}
+
+Para la herramienta, se ha creado un \textbf{\textit{lenguaje específico de dominio}} o \textbf{\textit{DSL}} 
+(\textit{domain specific language}). Este tipo de lenguajes, también denominados lenguajes orientados a aplicaciones, 
+son lenguajes de programación ejecutables que ofrecen, a través de notaciones y abstracciones apropiadas, poder
+expresivo enfocado y normalmente restringido a un dominio de problemas particular \cite{deursen_klint_visser_2000}. 
+Algunos de los DSL más utilizados a día de hoy son HTML, creado específicamente para la visualización de páginas web y 
+LaTeX, creado para la escritura de textos científicos.
+
+\vspace{10pt}
+En este tipo de lenguajes son usualmente pequeños, ofreciendo una lista restrictiva de abstracciones. Es por ello que
+también se les conoce como \textbf{\textit{minilenguajes}}. Suelen ser también declarativos, es decir, determinan qué
+funciones realizar, pero no el método para realizarlas. De esta manera, pueden también considerarse lenguajes de
+especificación además de lenguajes de programación. Cuando utilizan un compilador o intérprete para generar una
+aplicación a partir de ellos se les denomina también \textbf{\textit{lenguajes específicos de aplicaciones}}
+\cite{deursen_klint_visser_2000}.
+
+\vspace{10pt}
+Los DSLs tienen, en comparación con los lenguajes de propósito general, las siguientes ventajas:
+\begin{itemize}
+    \item Permiten expresar soluciones en el nivel y jerga del dominio del problema. De esta manera, permiten a los
+    expertos del dominio entender, validar, modificar y expandir fácilmente el lenguaje.
+    \item Sus programas son concisos y autodocumentados, siendo fáciles de entender y reusar.
+    \item Incorporan conocimiento del dominio, ayudando a preservar ese conocimiento.
+    \item Permiten realizar la validación y optimización al nivel del dominio.
+\end{itemize}
+Pese a estas ventajas, también tienen ciertas desventajas, como pueden ser:
+\begin{itemize}
+    \item El coste de diseño, implementación y mantenimiento.
+    \item El proceso de aprendizaje de uso.
+    \item La dificultad a la hora de equilibrar la especificidad en el dominio y las construcciones genéricas.
+    \item La posible pérdida de eficiencia en comparación con software escrito en un lenguaje de propósito general
+    \cite{deursen_klint_visser_2000}.
+\end{itemize}
+
+\vspace{10pt}
+En el caso de la herramienta, el lenguaje creado tiene una gramática simple, y utiliza un intérprete que genera un
+código de Scala, por lo que puede considerarse un minilenguaje específico de aplicación.
+
+% -------------------------------------------------------------------------------------------------------------------
+\section{Lenguaje de la herramienta}
+
+El objetivo del lenguaje es construir redes neuronales con algoritmos distribuidos y entrenarlas para obtener sus
+pesos y así poder utilizarlas. Es por ello que las abstracciones posibles se van a limitar a esas tareas: la 
+construcción de redes, la configuración de los algoritmos de aprendizaje, el entrenamiento de las redes y la 
+exportación de los pesos. Para poder interpretar el lenguaje, debemos definir en primer lugar su gramática.
+
+\subsection{Gramática}
+
+Una de las maneras más comunes de expresar la gramática de un lenguaje de programación es la \textbf{\textit{notación 
+de Backus-Naur}} o \textbf{\textit{BNF}}. La única diferencia que tiene con la notación que hemos visto en capítulos
+anteriores es la forma de expresar las reglas de producción. Mientras que con la notación anterior designábamos esas
+reglas con $\to$, ahora utilizamos $::=$. Además, cuando varias reglas de producción contienen los mísmos símbolos 
+productores, podemos agruparlas en una única, separando las posibles derivaciones con el símbolo $\mid$. De esta 
+manera, tenemos que son equivalentes:
+    \begin{gather}
+        A\to aBc \quad A\to b \quad A\to cA \\
+        A::= aBc\mid b \mid cA
+    \end{gather}
+La notación añade también los siguientes tres símbolos sobre la parte derecha de las reglas de producción:
+\begin{enumerate}
+    \item $?$: Simboliza la existencia de cero o una vez del símbolo o conjunto de símbolos previos, esto es, esos 
+    símbolos son opcionales.
+    \item $*$: Este símbolo, de la misma manera que para las expresiones regulares, expresa la repetición de un símbolo
+    o grupo de símbolos cero o más veces.
+    \item $+$: Análogamente a las expresiones regulares, simboliza la repetición una o más veces de un símbolo o grupo
+    de símbolos.
+\end{enumerate}
+
+Nuestro lenguaje, que hemos llamado \textit{Scala Spark Distributed Learning} o \textit{SSDL}, define su conjunto de
+reglas de producción en la figura \ref{fig:ssdl-gram-bnf}. De esa misma figura podemos extraer el alfabeto de
+símbolos no terminales (los símbolos entre ``\textlangle'' y ``\textrangle'') y terminales (el resto). Además, 
+tomamos como símbolo inicial \textit{program}.
+
+\begin{figure}[thb!]
+    \centering
+    \begin{bnf*}
+\bnfprod{program}
+    {(\bnfpn{stmt}\bnfor\bnfpn{comment})+}\\
+\bnfprod{stmt}
+    {\bnfts{begin} \bnfpn{action} \bnfts{end} \bnfor
+    \bnfts{fit} \bnfpn{id} \bnfpn{int} \bnfor
+    \bnfts{out} \bnfpn{id} \bnfpn{file}?}\\
+\bnfprod{action}
+    {\bnfpn{object} \bnfts{:} \bnfpn{id} \bnfpn{parameter}+}\\
+\bnfprod{parameter}
+    {\bnfts{set} (\bnfpn{ann-argument}\bnfor\bnfpn{dapso-argument})}\\
+\bnfprod{ann-argument}
+    {\bnfts{type}\bnfpn{net-type}\bnfor\bnfts{neurons}\bnfts{[}\bnfpn{int}\bnfts{,}\bnfpn{int}\bnfts{]}\bnfor}\\
+\bnfmore{\bnfts{data}\bnfts{[}\bnfpn{file}\bnfts{,}\bnfpn{file}\bnfts{]}\bnfor\bnfts{algorithm}\bnfpn{id}}\\
+\bnfprod{dapso-argument}
+    {\bnfts{particles}\bnfpn{int}\bnfor\bnfts{batch-size}\bnfpn{int}\bnfor\bnfts{n-rdd}\bnfpn{int}\bnfor}\\
+\bnfmore{\bnfts{pos-bound}\bnfpn{float}\bnfor\bnfts{vel-bound}\bnfpn{float}\bnfor\bnfts{vel-w}\bnfpn{float}\bnfor}\\
+\bnfmore{\bnfts{vel-c1}\bnfpn{float}\bnfor\bnfts{vel-c2}\bnfpn{float}\bnfor}\\
+\bnfprod{object}
+    {\bnfts{ann}\bnfor\bnfts{dapso}}\\
+\bnfprod{net-type}
+    {\bnfts{classifier}\bnfor\bnfts{regressor}}\\
+\bnfprod{comment}
+    {\bnfts{/*}\bnfpn{any}*\bnfts{*/}}\\
+\bnfprod{float}
+    {\bnfpn{int}\bnfts{.}\bnfpn{int}}\\
+\bnfprod{int}
+    {\bnfpn{digit}+}\\
+\bnfprod{id}
+    {(\bnfpn{digit}\bnfor\bnfpn{letter})+}\\
+\bnfprod{file}
+    {\bnfts{''}\bnfpn{any}+\bnfts{.csv''}}\\
+\bnfprod{any}
+    {\bnfpn{letter}\bnfor\bnfpn{digit}\bnfor\bnfts{\_}\bnfor\bnfsk\bnfor\bnfts{+}}\\
+\bnfprod{letter}
+    {\bnfts{a}\bnfor\bnfts{b}\bnfor\bnfsk\bnfor\bnfts{z}\bnfor\bnfts{A}\bnfor\bnfsk\bnfor\bnfts{Z}}\\
+\bnfprod{digit}
+    {\bnfts{0}\bnfor\bnfts{1}\bnfor\bnfsk\bnfor\bnfts{9}}
+\end{bnf*}
+    \caption{Reglas de producción de SSDL}
+    \label{fig:ssdl-gram-bnf}
+\end{figure}
+
+\vspace{10pt}
+La gramática SSDL, si nos fijamos, es una gramática libre de contexto. Es más, podemos ver que es una gramática
+libre de contexto positiva, puesto que no hay ninguna producción nula. Sin embargo, no podemos decir que esté
+en forma normal de Chomsky, por producciones como
+\begin{bnf*}
+\bnfprod{stmt}
+    {\bnfts{begin} \bnfpn{action} \bnfts{end}}
+\end{bnf*}
+Podríamos, como hemos visto en el capítulo anterior, generar una gramática equivalente que aceptase el mismo
+lenguaje y que estuviera en esa forma normal, pero no es necesario, ya que utilizaremos una herramienta que va
+a automatizar el proceso de validación.
+
+\subsection{Sintaxis del lenguaje}
+
+Vamos ahora a hablar un poco de la sintaxis del lenguaje.. En primer lugar, con este lenguaje podemos realizar
+cuatro tipos distintos de sentencias: generar la configuración del DAPSO, crear una red neuronal prealimentada,
+entrenar una red neuronal y extraer los pesos de la red a un archivo. El lenguaje ignora los espacios en blanco,
+sangría y cambios de línea, pero es preferible por comprensión mantener un cierto método de diferenciar las 
+diferentes sentencias del programa.
+
+\vspace{10pt}
+Veamos en primer lugar las sentencias generativas. Ambas deben encapsularse mediante las palabras reservadas
+\texttt{begin} y \texttt{end}. Unos esquemas de este tipo de sentenciases el de las figuras \ref{fig:ssdl-dapso} y
+\ref{fig:ssdl-ann}. Es importante notar que se debe en primer lugar construir algún algoritmo con sus parámetros
+específicos, puesto que es necesario proporcionar su identificador a las redes neuronales.
+
+\begin{figure}[ht!]
+    \StartLineAt{1}
+\begin{lstlisting}[language=Pascal]
+begin dapso : algoritmo1
+    set particles 100
+    set pos_bound 1.0
+    set vel_bound 0.6
+    set n_rdd 4
+end
+\end{lstlisting}
+    \caption{Ejemplo de configuración de un DAPSO en SSDL.}
+    \label{fig:ssdl-dapso}
+\end{figure}
+
+\begin{figure}[ht!]
+\StartLineAt{1}
+\begin{lstlisting}[language=Pascal]
+begin ann : clas1
+    set net_type classifier
+    set neurons [8,32]
+    set data ["conjunto_entrenamiento.csv","conjunto_test.csv"]
+    set algorithm algoritmo1
+end
+\end{lstlisting}
+    \caption{Ejemplo de configuración de una red neuronal en SSDL.}
+    \label{fig:ssdl-ann}
+\end{figure}
+
+\vspace{10pt}
+Una vez generada una red neuronal, podemos entrenarla y extraer sus pesos a un archivo. Para entrenar una red,
+escribimos \texttt{fit <id\_red> <numero\_iteraciones>}. Para extraer los pesos de la red a un archivo, se debe
+usar la sentencia \texttt{out} seguida del identificador de la red y, opcionalmente, el nombre del archivo en el
+que volcar los datos.
+
+\vspace{10pt}
+Finalmente, el lenguaje acepta comentarios. Para escribir un comentario, debemos envolverlo por los símbolos
+\texttt{/*} a la izquierda y \texttt{*/} a la derecha. Puesto que el lenguaje ignora los saltos de línea, podemos
+escribir comentarios de más de una línea de esta manera también. Un ejemplo completo de un programa escrito en
+SSDL puede encontrarse en el apéndice \ref{ap:ejemplo_ssdl}.
+
+% -------------------------------------------------------------------------------------------------------------------
+\section{Intérprete}
+
+El primer paso para generar el intérprete es el reconocimiento de los símbolos terminales y no terminales de la
+gramática del lenguaje, que denominaremos \textit{tokens}. Para ello, es necesario el uso de un analizador léxico 
+que, a partir del archivo de entrada, genere una lista con los \textit{tokens}. Este proceso puede realizarse, como
+hemos visto, mediante autómatas finitos. Si tomamos como ejemplo la configuración del DAPSO de la figura 
+\ref{fig:ssdl-dapso}, el análisis léxico de esa pieza de código daría el siguiente resultado:
+\begin{quote}
+    begin (\texttt{begin}),\quad dapso (\texttt{object}),\quad : (\texttt{:}),\quad algoritmo1 (\texttt{id}),\quad 
+    set (\texttt{set}), \\
+    particles (\texttt{particles}),\quad 100 (\texttt{int}),\quad set (\texttt{set}),\quad pos\_bound 
+    (\texttt{pos\_bound}) \\
+    1.0 (\texttt{float}),\quad set (\texttt{set}),\quad vel\_bound (\texttt{pos\_bound}),\quad 0.6 (\texttt{float}),
+    \quad set (\texttt{set}), \\
+    n\_rdd (\texttt{n\_rdd}),\quad 4 (\texttt{int}),\quad end (\texttt{end})
+\end{quote}
+El siguiente paso del intérprete es generar un \textbf{\textit{AST}} o \textbf{\textit{árbol de sintaxis abstracta}}
+a partir de la lista de \textit{tokens}. Este árbol es una representación de la estructura sintáctica del código 
+del programa. En lenguajes generados por gramáticas libres de contexto, este tipo de árboles es casi equivalente a 
+un árbol de derivación. Esta tarea la debe realizar un \textit{parser} o explorador. Puesto que la gramática de 
+SSDL es una libre de contexto, se puede utilizar un autómata de pila para esta tarea.
+
+\vspace{10pt}
+Finalmente, a partir del AST, el intérprete añade el significado a las expresiones que aparecen en él. Por ejemplo,
+si el lenguaje es capaz de generar variables o identificadores, la gramática no es capaz de almacenar su significado
+y asegurarse de su correcto uso. 
+
+\vspace{10pt}
+Para la implementación del intérprete, hemos utilizado la herramienta ANTLR 
+(\textit{ANother Tool for Language Recognition}). Se trata de una potente herramienta utilizada para analizar e
+interpretar texto o código. ANTLR puede utilizarse para realizar las siguientes tareas:
+\begin{itemize}
+    \item Generar analizadores sintácticos,
+    \item Definir la gramática del lenguaje que se desea analizar, utilizando el lenguaje específico de ANTLR, muy
+    parecido al de la notación de Backus-Naur, pero que permite leer y descartar automáticamente ciertas estructuras.
+    \item Generar \textit{parsers}, capaces de generar de forma automática el ASR de una entrada.
+    \item Generar automáticamente el código de los analizadores y exploradores del lenguaje especificado en varios
+    lenguajes de programación, como pueden ser Java, Python o JavaScript.
+\end{itemize}
+ANTLR se suele utilizar para crear lenguajes personalizados adaptados a dominios específicos o para la creación de
+lenguajes de aplicaciones que generan código en otro lenguaje a partir de su gramática, lo que permite una 
+resolución de problemas más expresiva y eficiente dentro de esos dominios. Por ejemplo, se puede utilizar para 
+la creación de un minilenguaje capaz de leer archivos en formato CSV \cite{parr_2013}. 
+
+\vspace{10pt}
+Esta herramienta es capaz también de generar una interfaz denominada \textit{visitor}, que va recorriendo el árbol 
+de ejecución, permitiendo la implementación de una función por cada regla visitada. De esta manera, nos permite 
+añadir la lógica de las construcciones sintácticas de una forma sencilla y directa \cite{parr_2013}.
+
+\vspace{10pt}
+En el caso de este trabajo, en primer lugar se reescribió la gramática del lenguaje (figura \ref{fig:ssdl-gram-bnf})
+en el lenguaje específico de ANTLR, que después generó el analizador léxico y el \textit{parser}. La gramática escrita 
+en el lenguaje específico de ANTLR se puede leer en el apéndice \ref{ap:ssdl_g4}.
+
+\endinput
+%--------------------------------------------------------------------
+% FIN DEL CAPÍTULO. 
+%--------------------------------------------------------------------
